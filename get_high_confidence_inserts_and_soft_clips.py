@@ -26,8 +26,23 @@ parser.add_argument('--window-size', type=int, default=50)
 parser.add_argument('--min-mapq-fraction', type=float, default=0)
 parser.add_argument('--dust-fraction', type=float, default=0.5)
 parser.add_argument('--threads', required=False, type=int, default=1)
+parser.add_argument('--sc', type=bool, default=False)
 args = parser.parse_args()
 
+threads_to_use = 1
+if args.threads > 1:
+    threads_to_use = args.threads - 1
+
+mapped_count = {}
+annotated_count = {}
+sam_reader = pysam.AlignmentFile(args.read_to_reference_bam)
+for record in sam_reader.fetch():
+    if record.is_unmapped:
+        continue
+    if record.query_name not in mapped_count:
+        mapped_count[record.query_name] = 0
+    if record.mapping_quality >= 20:
+        mapped_count[record.query_name] += 1
 
 # regions is a dict[chrom][region] = [(record, lowqual, total)]
 # Each region for a chromsosome is 10kb long, tsv records where the insert falls in that region are placed in it
@@ -53,17 +68,23 @@ with open(args.tsv) as in_tsv:
             start -= 10000
         start -= int(args.window_size)
         end = start + 10000 + 2*int(args.window_size)
+        if args.sc:
+            if mapped_count[line[3]] > 1:
+                if line[8] == "PASS":
+                    line[8] = "multimapped"
+                else:
+                    line[8] = line[8]+"multimapped"
         if line[0] not in regions:
             regions[line[0]] = defaultdict(list)
         regions[line[0]][str(start)+"-"+str(end)].append([line,0,0])
 
 for chrom in regions:
     for region in regions[chrom]:
-        if pos % int(args.threads) not in tsv_records:
-            tsv_records[pos % int(args.threads)] = {}
-        if chrom not in tsv_records[pos % int(args.threads)]:
-            tsv_records[pos % int(args.threads)][chrom] = defaultdict(list)
-        tsv_records[pos % int(args.threads)][chrom][region] = regions[chrom][region]
+        if pos % int(threads_to_use) not in tsv_records:
+            tsv_records[pos % int(threads_to_use)] = {}
+        if chrom not in tsv_records[pos % int(threads_to_use)]:
+            tsv_records[pos % int(threads_to_use)][chrom] = defaultdict(list)
+        tsv_records[pos % int(threads_to_use)][chrom][region] = regions[chrom][region]
         pos += 1
 
 contig_lengths = {}
@@ -104,7 +125,7 @@ def filter_hc(file_name, tsv_records, contig_lengths):
                 pass
     return hc_inserts_and_softclips
 
-pool = ThreadPool(processes=int(args.threads))
+pool = ThreadPool(processes=int(threads_to_use))
 
 results = []
 for reg in tsv_records:

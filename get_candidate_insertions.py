@@ -22,6 +22,7 @@ parser.add_argument('--bam', type=str, required=True)
 parser.add_argument('--original-bam', type=str, required=True)
 parser.add_argument('--min-insertion-length', type=int, default=100)
 parser.add_argument('--min-flank-size', required=False, default=100)
+parser.add_argument('--reference-gap-minimum', type=int, default=100)
 parser.add_argument('--merged', type=str, required=True)
 args = parser.parse_args()
 
@@ -31,7 +32,7 @@ with open(args.merged) as in_merge:
         line = line.strip()
         merged_reads[line] = 1
 
-max_ref_gap_at_candidate = 5
+max_ref_gap_at_candidate = args.reference_gap_minimum
 sam_reader = pysam.AlignmentFile(args.original_bam)
 
 mapped_count = {}

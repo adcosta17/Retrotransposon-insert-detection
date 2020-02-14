@@ -177,10 +177,10 @@ for record in sam_reader.fetch():
 for read in records_to_output:
     for item in records_to_output[read]:
         annotation = item[1]
-        if mapped_count[read] > 1 and read not in merged_reads:
-            if "PASS" not in annotation:
-                annotation = annotation + ",multimapped"
-            else:
-                annotation = "multimapped"
+        #if mapped_count[read] > 1 and read not in merged_reads:
+        #    if "PASS" not in annotation:
+        #        annotation = annotation + ",multimapped"
+        #    else:
+        #        annotation = "multimapped"
         print(item[0]+"\t"+annotation)
         
