@@ -249,7 +249,7 @@ rule filter_by_reference_sample:
         reference_filter_script = srcdir("remove_insertions_in_reference_samples.py"),
         memory_per_thread="24G"
     shell:
-        "{config[python_dir]} {params.reference_filter_script} --reference-sample {config[reference_tsv_to_filter]} --max-distance {config[max_distance_to_reference_insertion]} --input {input.file} --sc {input.sc} > {output}"
+        "{config[python_dir]} {params.reference_filter_script} --reference-sample {config[reference_tsv_to_filter]} --max-distance {config[max_distance_to_reference_insertion]} --input {input.file} --sc {input.sc} --reference-repeat-bed {config[repeat_bed]} > {output}"
 
 rule normalize_counts:
     input:
