@@ -3,7 +3,6 @@ import argparse
 import sys
 import csv
 from intervaltree import Interval, IntervalTree
-
 from collections import defaultdict
 
 def get_inserts(all_inserts, chrom, start, end):
@@ -20,10 +19,9 @@ parser.add_argument('--reference-repeat-bed', type=str, required=True)
 parser.add_argument('--max-distance', type=int, default=100)
 args = parser.parse_args()
 
-# Read in all inserts
+# Read in all inserts and setup position list
 all_inserts = defaultdict(lambda: defaultdict(int))
 with open(args.input) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         row_args = row.strip().split("\t")
@@ -38,10 +36,8 @@ with open(args.input) as csvfile:
         for i in range((end - start)):
             all_inserts[chrom][i+start] = 0
 
-print("Read in inserts", file=sys.stderr)
-
+# Read in soft clips and add to position lists
 with open(args.sc) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         row_args = row.strip().split("\t")
@@ -56,8 +52,7 @@ with open(args.sc) as csvfile:
         for i in range((end - start)):
             all_inserts[chrom][i+start] = 0
 
-print("Read in sc", file=sys.stderr)
-
+# Read inserts again and count how many fall within max_distance bp of each position in genome
 with open(args.input) as csvfile:
     #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
@@ -74,8 +69,7 @@ with open(args.input) as csvfile:
         for i in range((end - start)):
             all_inserts[chrom][i+start] += 1
 
-print("Processed inserts", file=sys.stderr)
-
+# Count how many softclips fall within max_distance bp of each position in genome 
 with open(args.sc) as csvfile:
     #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
@@ -91,13 +85,10 @@ with open(args.sc) as csvfile:
             start = 0
         for i in range((end - start)):
             all_inserts[chrom][i+start] += 1
-
-print("Processed sc", file=sys.stderr)
 
 # read reference insertions and set up interval trees
 intervaltrees = defaultdict(IntervalTree)
 with open(args.reference_sample) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         row_args = row.strip().split("\t")
@@ -115,7 +106,6 @@ with open(args.reference_sample) as csvfile:
 
 repeat_tree = defaultdict(lambda: defaultdict(IntervalTree))
 with open(args.reference_repeat_bed) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         if count == 0:
@@ -138,7 +128,6 @@ with open(args.reference_repeat_bed) as csvfile:
 
 # read input file and only emit records not near a record in the interval tree 
 with open(args.input) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         row_args = row.strip().split("\t")
@@ -173,7 +162,6 @@ with open(args.input) as csvfile:
 
 
 with open(args.sc) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         row_args = row.strip().split("\t")

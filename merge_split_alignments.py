@@ -228,9 +228,7 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                     record_1_merged = False
                     while i < len(records):
                         record_2 = records[i]
-                        #print(record_1.query_name)
                         if record_1.query_name != record_2.query_name:
-                            #print("query_name")
                             if check_insertion_or_soft_clip_bam(record_1, args.indel_size):
                                 if check_insertion_hard_clip_bam(record_1, args.indel_size):
                                     need_hard_clip.append(record_1)
@@ -241,7 +239,6 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                             continue
                         # Check both entries are from the same chromosme
                         if record_1.reference_name != record_2.reference_name:
-                            #print("reference_name")
                             if check_insertion_or_soft_clip_bam(record_1, args.indel_size):
                                 if check_insertion_hard_clip_bam(record_1, args.indel_size):
                                     need_hard_clip.append(record_1)
@@ -252,7 +249,6 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                             continue
                         # Check that both entries are on the same strand
                         if record_1.is_reverse != record_2.is_reverse:
-                            #print("is_reverse")
                             if check_insertion_or_soft_clip_bam(record_1, args.indel_size):
                                 if check_insertion_hard_clip_bam(record_1, args.indel_size):
                                     need_hard_clip.append(record_1)
@@ -264,7 +260,6 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                         # Need to have the read align to a space that is less than the read length
                         # If the read aligns split over a space larger than its length in the reference, there may be a deletion not insertion in the read
                         if (record_1.reference_length + record_2.reference_length) > 1.2* get_read_length(record_1.cigarstring) :
-                            #print("reference_length")
                             if check_insertion_or_soft_clip_bam(record_1, args.indel_size):
                                 if check_insertion_hard_clip_bam(record_1, args.indel_size):
                                     need_hard_clip.append(record_1)
@@ -276,7 +271,6 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                         # Check that the distance between the end of one alignment and the start of another falls within our allowed window. Want to have the alignment 
                         if (abs(record_1.reference_end - record_2.reference_start) > int(args.reference_gap_minimum) and 
                             abs(record_2.reference_end - record_1.reference_start) > int(args.reference_gap_minimum)):
-                            #print("reference_end")
                             if check_insertion_or_soft_clip_bam(record_1, args.indel_size):
                                 if check_insertion_hard_clip_bam(record_1, args.indel_size):
                                     need_hard_clip.append(record_1)
@@ -286,7 +280,6 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                             i += 1
                             continue
                         if record_1.mapping_quality < args.minimum_mapping_qual or record_2.mapping_quality < args.minimum_mapping_qual:
-                            #print("mapping_quality")
                             if check_insertion_or_soft_clip_bam(record_1, args.indel_size):
                                 if check_insertion_hard_clip_bam(record_1, args.indel_size):
                                     need_hard_clip.append(record_1)
@@ -305,17 +298,15 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                         insert_size = 0
                         tmp_str = ""
                         if record_1.reference_start > record_2.reference_start:
-                            tmp_str = get_start_end_string(record_2.cigarstring, record_1.cigarstring, record_1.query_name, record_2.reference_start, record_2.reference_end, record_1.reference_start, record_1.reference_end)
-                            #insert_size = int(tmp_str.split("_")[2]) - (record_2.reference_end - record_1.reference_start)
-                            #a.cigarstring = clean_cigar(record_2.cigarstring) + str(insert_size) + "I" + clean_cigar(record_1.cigarstring)
+                            tmp_str = get_start_end_string(record_2.cigarstring, record_1.cigarstring, 
+                                record_1.query_name, record_2.reference_start, record_2.reference_end, 
+                                record_1.reference_start, record_1.reference_end)
                             a.cigarstring = tmp_str.split("_")[2]
                         else:
-                            tmp_str = get_start_end_string(record_1.cigarstring, record_2.cigarstring, record_1.query_name, record_1.reference_start, record_1.reference_end, record_2.reference_start, record_2.reference_end)
-                            #insert_size = int(tmp_str.split("_")[2]) - (record_1.reference_end - record_2.reference_start)
-                            #a.cigarstring = clean_cigar(record_1.cigarstring) + str(insert_size) + "I" + clean_cigar(record_2.cigarstring)
+                            tmp_str = get_start_end_string(record_1.cigarstring, record_2.cigarstring, 
+                                record_1.query_name, record_1.reference_start, record_1.reference_end, 
+                                record_2.reference_start, record_2.reference_end)
                             a.cigarstring = tmp_str.split("_")[2]
-                        #a.template_length= record_1.template_length + insert_size + record_2.template_length
-                        #outf.write(a)
                         if tmp_str != "0_0_0":
                             alignment_start_end.append(tmp_str)
                             alignments_to_output.append(a)
@@ -382,11 +373,7 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                                 out_count += 1
                                 seen.append(i)
                             except KeyError:
-                                #print(alignments_to_output[i].query_name + " not found in fastq")
-                                # Read not found in this fastq
-                                # Assume it will be in another fastq in the folder
                                 pass
-                        # Now need to go through file and
                         seen = []
                         for i in range(len(need_hard_clip)):
                             if i in seen:

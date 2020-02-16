@@ -18,6 +18,7 @@ def calculate_sdust_score(seq):
     sum_score /= (len(seq) - 1)
     return sum_score    
 
+# Get the soft clip's position on the read in read positions
 def get_read_pos(record, min_insert, front):
     cigars = re.findall('[0-9]*[A-Z]', record.cigarstring)
     if not front:
@@ -44,6 +45,7 @@ def get_read_pos(record, min_insert, front):
     else:
         return None
 
+# Get soft clip's position in reference positions
 def get_ref_pos(record, front):
     cigars = re.findall('[0-9]*[A-Z]', record.cigarstring)
     if not front:
@@ -89,32 +91,12 @@ def get_read_length(cigarstring):
 
 parser = argparse.ArgumentParser( description='Extract reads with long insertions and soft clips')
 parser.add_argument('--bam', type=str, required=True)
-parser.add_argument('--original-bam', type=str, required=True)
 parser.add_argument('--min-insertion-length', type=int, default=100)
 parser.add_argument('--sc-length-filter', type=int, default=500)
 parser.add_argument('--min-flank-size', required=False, default=100)
-parser.add_argument('--merged', type=str, required=True)
 args = parser.parse_args()
 
-merged_reads = {}
-with open(args.merged) as in_merge:
-    for line in in_merge:
-        line = line.strip()
-        merged_reads[line] = 1
-
-max_ref_gap_at_candidate = 5
-sam_reader = pysam.AlignmentFile(args.original_bam)
-
-mapped_count = {}
 records_to_output = defaultdict(list)
-
-for record in sam_reader.fetch():
-    if record.is_unmapped:
-        continue
-    if record.query_name not in mapped_count:
-        mapped_count[record.query_name] = 0
-    mapped_count[record.query_name] += 1
-
 
 print("\t".join(["chromosome", "reference_insertion_start", "reference_insertion_end", "read_name", "read_insertion_start", "read_insertion_end", "dust_score", "insertion_sequence", "pass_fail"]))
 sam_reader = pysam.AlignmentFile(args.bam)
@@ -177,10 +159,5 @@ for record in sam_reader.fetch():
 for read in records_to_output:
     for item in records_to_output[read]:
         annotation = item[1]
-        #if mapped_count[read] > 1 and read not in merged_reads:
-        #    if "PASS" not in annotation:
-        #        annotation = annotation + ",multimapped"
-        #    else:
-        #        annotation = "multimapped"
         print(item[0]+"\t"+annotation)
         

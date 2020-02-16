@@ -33,7 +33,6 @@ with open(args.tsv) as in_tsv:
         for reason in reasons:
             pass_fail[reason] = 1
 
-print(pass_fail)
 count = 0
 if args.header:
     count = 1

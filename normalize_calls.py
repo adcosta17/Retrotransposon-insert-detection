@@ -27,12 +27,12 @@ for file in onlyfiles:
     base_count += float(ret_arr[1].split(":")[1])
 
 # Print raw, base normalized and read normalized insert counts
-#print("LINE\tLINE_GBP\tLINE_RPM\tSINE\tSINE_GBP\tSINE_RPM\tSVA\tSVA_GBP\tSVA_RPM\tERV\tERV_GBP\tERV_RPM")
+# Header:
+# LINE  LINE_GBP    LINE_RPM    SINE    SINE_GBP    SINE_RPM    SVA     SVA_GBP     SVA_RPM     ERV     ERV_GBP     ERV_RPM
 
 counts = defaultdict(int)
 # read input file and only emit records not near a record in the interval tree 
 with open(args.input) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         row_args = row.strip().split("\t")
@@ -66,7 +66,6 @@ print(args.sample + "\tinsert\t" + str(counts["LINE"])+"\t"+str(line_mbp)+"\t"+s
 counts = defaultdict(int)
 # read input file and only emit records not near a record in the interval tree 
 with open(args.input) as csvfile:
-    #reader = csv.DictReader(csvfile, delimiter="\t")
     count = 0
     for row in csvfile:
         row_args = row.strip().split("\t")

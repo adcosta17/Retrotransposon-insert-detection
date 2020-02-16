@@ -146,10 +146,7 @@ rule run_get_filtered_candidate_insertions:
 rule run_get_filtered_candidate_soft_clipped:
     input:
         bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam",
-        bam_index="{sample}/filtered_mapped/{sample}.{test}.sorted.bam.bai",
-        full_bam="{sample}/mapped/{sample}.sorted.bam",
-        full_bam_index="{sample}/mapped/{sample}.sorted.bam.bai",
-        merged_reads="{sample}/filtered_mapped/{sample}.{test}.merged_reads.txt"
+        bam_index="{sample}/filtered_mapped/{sample}.{test}.sorted.bam.bai"
     output:
         "{sample}/read_analysis/{sample}.{test}.read_soft_clipped.tsv"
     threads: 1
@@ -157,7 +154,7 @@ rule run_get_filtered_candidate_soft_clipped:
         candidate_insertion_script = srcdir("get_candidate_insertions_soft_clipped.py"),
         memory_per_thread="128G"
     shell:
-        "{config[python_dir]} {params.candidate_insertion_script} --bam {input.bam} --original-bam {input.full_bam} --merged {input.merged_reads} --min-insertion-length {config[min_insertion_length]} --sc-length-filter {config[soft_clip_length]} > {output}"
+        "{config[python_dir]} {params.candidate_insertion_script} --bam {input.bam} --min-insertion-length {config[min_insertion_length]} --sc-length-filter {config[soft_clip_length]} > {output}"
 
 
 rule run_convert_candidate_insertions_to_fasta:
@@ -224,7 +221,7 @@ rule get_high_confidence_soft_clipped_tsv:
         hc_soft_clip_script = srcdir("get_high_confidence_inserts_and_soft_clips.py"),
         hc_bed=get_hc_bed_for_test
     shell:
-        "{config[python_dir]} {params.hc_soft_clip_script} --threads {threads} --sc 1 --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} --dust-fraction {config[dust_sc]} > {output}"
+        "{config[python_dir]} {params.hc_soft_clip_script} --threads {threads} --sc 1 --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} > {output}"
 
 rule get_high_confidence_inserts_tsv:
     input:
@@ -239,7 +236,7 @@ rule get_high_confidence_inserts_tsv:
         hc_insert_script = srcdir("get_high_confidence_inserts_and_soft_clips.py"),
         hc_bed=get_hc_bed_for_test
     shell:
-        "{config[python_dir]} {params.hc_insert_script} --threads {threads} --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} --dust-fraction {config[dust_insert]} > {output}"
+        "{config[python_dir]} {params.hc_insert_script} --threads {threads} --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} > {output}"
 
 rule filter_by_reference_sample:
     input:

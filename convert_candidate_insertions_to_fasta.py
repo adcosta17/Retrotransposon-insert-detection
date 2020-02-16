@@ -15,6 +15,5 @@ with open(args.input) as csvfile:
         if count == 0:
             count += 1
             continue
-        #record_name = row['read_name'] + ':' + row['read_insertion_start'] + '-' + row['read_insertion_end']
         record_name = row_args[3] + ":" + row_args[4] + "-" + row_args[5]
         print(">%s\n%s" % (record_name, row_args[7]))

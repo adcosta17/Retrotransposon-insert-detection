@@ -24,7 +24,6 @@ parser.add_argument('--read-to-reference-bam', required=True)
 parser.add_argument('--min-mapq', type=int, default=20)
 parser.add_argument('--window-size', type=int, default=50)
 parser.add_argument('--min-mapq-fraction', type=float, default=0)
-parser.add_argument('--dust-fraction', type=float, default=0.5)
 parser.add_argument('--threads', required=False, type=int, default=1)
 parser.add_argument('--sc', type=bool, default=False)
 args = parser.parse_args()
@@ -45,9 +44,9 @@ for record in sam_reader.fetch():
         mapped_count[record.query_name] += 1
 
 # regions is a dict[chrom][region] = [(record, lowqual, total)]
-# Each region for a chromsosome is 10kb long, tsv records where the insert falls in that region are placed in it
+# Each region for a chromsosome is 10kb + window_size long, tsv records where the insert falls in that region are placed in it
 # During loop go through each chromosome's region list. Get bam records for region
-# Add to the tsv record counts for each bam that intersects +/- 10 bp of insert
+# Add to the tsv record counts for each bam that intersects +/- window_size bp of insert
 tsv_records = {}
 regions = {}
 pos = 0
@@ -115,9 +114,11 @@ def filter_hc(file_name, tsv_records, contig_lengths):
                         #if record.query_name == line_arr[3]:
                         #	print(str(record.reference_start) + " " + str(line_arr[1]) + " " + str(record.reference_end) + " " + str(line_arr[2]))
                         if ((int(record.reference_start) <= int(line_arr[1]) and int(record.reference_end) >= int(line_arr[1])) or
-                           (int(record.reference_start) <= int(line_arr[1]) and int(record.reference_end) < int(line_arr[1]) and (int(line_arr[1]) - int(record.reference_end)) <= int(args.window_size)) or
+                           (int(record.reference_start) <= int(line_arr[1]) and int(record.reference_end) < int(line_arr[1]) and 
+                            (int(line_arr[1]) - int(record.reference_end)) <= int(args.window_size)) or
                            (int(record.reference_start) <= int(line_arr[2]) and int(record.reference_end) >= int(line_arr[2])) or
-                           (int(record.reference_start) > int(line_arr[2]) and int(record.reference_end) >= int(line_arr[2]) and (int(record.reference_start) - int(line_arr[2])) <= int(args.window_size))):
+                           (int(record.reference_start) > int(line_arr[2]) and int(record.reference_end) >= int(line_arr[2]) and 
+                            (int(record.reference_start) - int(line_arr[2])) <= int(args.window_size))):
                             hc_inserts_and_softclips[chrom][region][i][2] += 1
                             if record.mapq < args.min_mapq:
                                 hc_inserts_and_softclips[chrom][region][i][1] += 1
@@ -139,42 +140,19 @@ for i in results:
     for chrom in res:
         for region in res[chrom]:
             for i in range(len(res[chrom][region])):
-                dust = False
-                if float(res[chrom][region][i][0][6]) < args.dust_fraction:
-                    dust = True
                 if res[chrom][region][i][2] == 0:
                     updated_line = res[chrom][region][i][0]
                     if updated_line[8] == "PASS":
-                        if dust:
-                            updated_line[8] = "mapq_fraction,dust"
-                        else:
-                            updated_line[8] = "mapq_fraction"
+                        updated_line[8] = "mapq_fraction"
                     else:
-                        if dust:
-                            updated_line[8] = updated_line[8]+",mapq_fraction,dust"
-                        else:
-                            updated_line[8] = updated_line[8]+",mapq_fraction"
+                        updated_line[8] = updated_line[8]+",mapq_fraction"
                     print("\t".join(updated_line) + "\t1")
                 elif float(res[chrom][region][i][1])/res[chrom][region][i][2] < args.min_mapq_fraction:
-                    if dust:
-                        updated_line = res[chrom][region][i][0]
-                        if updated_line[8] == "PASS":
-                            updated_line[8] = "dust"
-                        else:
-                            updated_line[8] = updated_line[8]+",dust"
-                        print("\t".join(updated_line)+ "\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
-                    else:
-                        print("\t".join(res[chrom][region][i][0])+ "\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
+                    print("\t".join(res[chrom][region][i][0])+ "\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
                 else:
                     updated_line = res[chrom][region][i][0]
                     if updated_line[8] == "PASS":
-                        if dust:
-                            updated_line[8] = "mapq_fraction,dust"
-                        else:
-                            updated_line[8] = "mapq_fraction"
+                        updated_line[8] = "mapq_fraction"
                     else:
-                        if dust:
-                            updated_line[8] = updated_line[8]+",mapq_fraction,dust"
-                        else:
-                            updated_line[8] = updated_line[8]+",mapq_fraction"
+                        updated_line[8] = updated_line[8]+",mapq_fraction"
                     print("\t".join(updated_line) +"\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
