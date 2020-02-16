@@ -28,6 +28,10 @@ def get_run_fastq_folder(wildcards):
 def get_plot_dir(wildcards):
     return config['base_dir'] + wildcards.sample + "/plots/"
 
+def get_sample_name(wildcards):
+    return wildcards.sample
+
+
 #
 # Top level targets
 #
@@ -260,9 +264,10 @@ rule normalize_counts:
     params:
         reference_filter_script = srcdir("normalize_calls.py"),
         memory_per_thread="150G",
-        fastq_folder=get_run_fastq_folder
+        fastq_folder=get_run_fastq_folder,
+        sample_name=get_sample_name
     shell:
-        "{config[python_dir]} {params.reference_filter_script} --input {input} --fastq-folder {params.fastq_folder} > {output}"
+        "{config[python_dir]} {params.reference_filter_script} --input {input} --sample {params.sample_name} --fastq-folder {params.fastq_folder} > {output}"
 
 
 rule make_plots:
