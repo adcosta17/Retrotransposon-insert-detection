@@ -68,29 +68,29 @@ rule all_filtered_tsv:
 
 # Map a run to the reference genome
 
-#rule minimap2_align:
-#    input:
-#        get_sample_fastq
-#    output:
-#        "{sample}/mapped/{sample}.sorted.bam"
-#    params:
-#        memory_per_thread="10G",
-#        ref_to_use= get_reference_for_test,
-#        input_fastq_folder=get_sample_fastq_folder,
-#        tmp_loc="{sample}/ref_mapped/{sample}.{test}.tmp",
-#        tmp_output="{sample}/ref_mapped/{sample}.{test}.sorted.tmp.bam"
-#    threads: 20
-#    shell:
-#        """
-#        i=0
-#        for filename in {params.input_fastq_folder}*.fastq.gz; do
-#            echo $filename
-            #{config[minimap_dir]} -x map-ont -a -2 --MD -t {threads} {params.ref_to_use} $filename | {config[samtools_dir]} sort -T {params.tmp_loc} -o {params.tmp_output}_$i
-#            ((i=i+1))
-#        done
-#        {config[samtools_dir]} merge {output} {params.tmp_output}*
-#        rm {params.tmp_output}*
-#        """
+rule minimap2_align:
+    input:
+        get_sample_fastq
+    output:
+        "{sample}/mapped/{sample}.{test}.sorted.bam"
+    params:
+        memory_per_thread="10G",
+        ref_to_use= get_reference_for_test,
+        input_fastq_folder=get_sample_fastq_folder,
+        tmp_loc="{sample}/mapped/{sample}.{test}.tmp",
+        tmp_output="{sample}/mapped/{sample}.{test}.sorted.tmp.bam"
+    threads: 20
+    shell:
+        """
+        i=0
+        for filename in {params.input_fastq_folder}*.fastq.gz; do
+            echo $filename
+            {config[minimap_dir]} -x map-ont -a -2 --MD -t {threads} {params.ref_to_use} $filename | {config[samtools_dir]} sort -T {params.tmp_loc} -o {params.tmp_output}_$i
+            ((i=i+1))
+        done
+        {config[samtools_dir]} merge {output} {params.tmp_output}*
+        rm {params.tmp_output}*
+        """
 
 # Index a bam
 rule make_bam_index:
@@ -111,8 +111,8 @@ rule make_bam_index:
 
 rule run_get_filtered_bams:
     input:
-        bam="{sample}/mapped/{sample}.sorted.bam",
-        bam_index="{sample}/mapped/{sample}.sorted.bam.bai",
+        bam="{sample}/mapped/{sample}.{test}.sorted.bam",
+        bam_index="{sample}/mapped/{sample}.{test}.sorted.bam.bai",
     output:
         bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam",
         merged_reads="{sample}/filtered_mapped/{sample}.{test}.merged_reads.txt"
@@ -133,8 +133,8 @@ rule run_get_filtered_candidate_insertions:
     input:
         bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam",
         bam_index="{sample}/filtered_mapped/{sample}.{test}.sorted.bam.bai",
-        full_bam="{sample}/mapped/{sample}.sorted.bam",
-        full_bam_index="{sample}/mapped/{sample}.sorted.bam.bai",
+        full_bam="{sample}/mapped/{sample}.{test}.sorted.bam",
+        full_bam_index="{sample}/mapped/{sample}.{test}.sorted.bam.bai",
         merged_reads="{sample}/filtered_mapped/{sample}.{test}.merged_reads.txt"
     output:
         "{sample}/read_analysis_permissive/{sample}.{test}.read_insertions.tsv"
@@ -214,8 +214,8 @@ rule run_candidate_insertion_annotation:
 rule get_high_confidence_soft_clipped_tsv:
     input:
         tsv="{sample}/read_analysis_permissive/{sample}.{test}.read_soft_clipped.repbase_annotated.tsv",
-        bam="{sample}/mapped/{sample}.sorted.bam",
-        bam_index="{sample}/mapped/{sample}.sorted.bam.bai"
+        bam="{sample}/mapped/{sample}.{test}.sorted.bam",
+        bam_index="{sample}/mapped/{sample}.{test}.sorted.bam.bai"
     output:
         "{sample}/read_analysis_permissive/{sample}.{test}.read_soft_clipped.repbase_annotated.high_confidence.tsv"
     threads: 20
@@ -229,8 +229,8 @@ rule get_high_confidence_soft_clipped_tsv:
 rule get_high_confidence_inserts_tsv:
     input:
         tsv="{sample}/read_analysis_permissive/{sample}.{test}.read_insertions.repbase_annotated.tsv",
-        bam="{sample}/mapped/{sample}.sorted.bam",
-        bam_index="{sample}/mapped/{sample}.sorted.bam.bai"
+        bam="{sample}/mapped/{sample}.{test}.sorted.bam",
+        bam_index="{sample}/mapped/{sample}.{test}.sorted.bam.bai"
     output:
         "{sample}/read_analysis_permissive/{sample}.{test}.read_insertions.repbase_annotated.high_confidence.tsv"
     threads: 20
