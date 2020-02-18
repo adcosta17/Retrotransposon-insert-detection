@@ -131,7 +131,6 @@ def get_max_div(span_list):
 parser = argparse.ArgumentParser( description='Get all reads that flank any deleted regions based on alignments to original genome')
 parser.add_argument('--bed', required=True)
 parser.add_argument('--read-to-reference-bam', required=True)
-parser.add_argument('--all-bam', required=True)
 parser.add_argument('--output-insert-list', required=True)
 parser.add_argument('--output-sc-list', required=False)
 parser.add_argument('--flank-size', required=False, type=int, default=100)
