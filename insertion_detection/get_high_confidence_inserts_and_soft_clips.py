@@ -43,10 +43,9 @@ for record in sam_reader.fetch():
     if record.mapping_quality >= 20:
         mapped_count[record.query_name] += 1
 
-# regions is a dict[chrom][region] = [(record, lowqual, total)]
-# Each region for a chromsosome is 10kb + window_size long, tsv records where the insert falls in that region are placed in it
-# During loop go through each chromosome's region list. Get bam records for region
-# Add to the tsv record counts for each bam that intersects +/- window_size bp of insert
+# Split the records in bins of size 10KB.
+# Done so that we can do the bam access in parallel and load regions once rather than per insert or all records at once
+# All at once is memory intensive, may not have enough. One at a time is very slow and the same region may be loaded multiple times
 tsv_records = {}
 regions = {}
 pos = 0
@@ -67,6 +66,7 @@ with open(args.tsv) as in_tsv:
             start -= 10000
         start -= int(args.window_size)
         end = start + 10000 + 2*int(args.window_size)
+        # Do multimapped for softclips here
         if args.sc:
             if mapped_count[line[3]] > 1:
                 if line[8] == "PASS":
@@ -111,8 +111,6 @@ def filter_hc(file_name, tsv_records, contig_lengths):
                     # Go through all the reads in the region
                     for i in range(len(hc_inserts_and_softclips[chrom][region])):
                         line_arr = hc_inserts_and_softclips[chrom][region][i][0]
-                        #if record.query_name == line_arr[3]:
-                        #	print(str(record.reference_start) + " " + str(line_arr[1]) + " " + str(record.reference_end) + " " + str(line_arr[2]))
                         if ((int(record.reference_start) <= int(line_arr[1]) and int(record.reference_end) >= int(line_arr[1])) or
                            (int(record.reference_start) <= int(line_arr[1]) and int(record.reference_end) < int(line_arr[1]) and 
                             (int(line_arr[1]) - int(record.reference_end)) <= int(args.window_size)) or

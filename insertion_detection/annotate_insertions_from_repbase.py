@@ -93,19 +93,13 @@ def parse_mappings_from_tab(input_tab):
 
 parser = argparse.ArgumentParser( description='Annotate .read_insertions.tsv with mappings of the insertion sequence to repbase')
 parser.add_argument('--input', required=True)
-parser.add_argument('--minimap2-paf', required=False)
-parser.add_argument('--last-tab', required=False)
+parser.add_argument('--last-tab', required=True)
 parser.add_argument('--min-mapped-fraction', type=float, default=0.9)
 parser.add_argument('--min-mapped-length', type=int, default=100)
 parser.add_argument('--min-escore', type=float, default=1e-15)
 args = parser.parse_args()
 
-read_to_best_annotation = defaultdict(RepbaseMapping)
-
-if args.minimap2_paf:
-    read_to_best_annotation = parse_mappings_from_paf(args.minimap2_paf)
-elif args.last_tab:
-    read_to_best_annotation = parse_mappings_from_tab(args.last_tab)
+read_to_best_annotation = parse_mappings_from_tab(args.last_tab)
 
 with open(args.input) as csvfile:
     count = 0

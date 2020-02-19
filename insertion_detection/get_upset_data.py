@@ -11,9 +11,14 @@ from collections import defaultdict
 parser = argparse.ArgumentParser( description='Get a table of data for upset plot')
 parser.add_argument('--tsv', required=True)
 parser.add_argument('--output', required=True)
-parser.add_argument('--filter', required=False)
+parser.add_argument('--filter', required=False, default="")
 parser.add_argument('--header', nargs='?', const="", default="")
+parser.add_argument('--sc', nargs='?', const="", default="")
 args = parser.parse_args()
+
+in_type = "insert"
+if args.sc:
+	in_type = "softclip"
 
 # Go through tsv and write out upset matrix
 pass_fail = {}
@@ -27,7 +32,7 @@ with open(args.tsv) as in_tsv:
             continue
         line_args = line.strip().split('\t')
         if args.filter:
-            if args.filter != line_args[22] or line_args[21] != "softclip":
+            if args.filter != line_args[22] or line_args[21] != in_type:
                 continue
         reasons = line_args[8].split(",")
         for reason in reasons:
@@ -48,7 +53,7 @@ with open(args.tsv) as in_tsv:
                 continue
             line_args = line.strip().split('\t')
             if args.filter:
-                if args.filter != line_args[22] or line_args[21] != "softclip":
+                if args.filter != line_args[22] or line_args[21] != in_type:
                     continue
             reasons = line_args[8].split(",")
             out_up.write(line_args[3]+":"+line_args[4]+"-"+line_args[5])
