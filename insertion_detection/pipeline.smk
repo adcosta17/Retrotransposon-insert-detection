@@ -11,9 +11,6 @@ import os
 def get_reference_for_test(wildcards):
     return config["reference_"+wildcards.test]
 
-def get_hc_bed_for_test(wildcards):
-    return config["hc_bed_"+wildcards.test]
-
 # Search fastq folder from config
 def get_sample_fastq(wildcards):
     path = config['base_dir'] + wildcards.sample + "/fastq/*.fastq.gz"
@@ -226,8 +223,7 @@ rule get_high_confidence_soft_clipped_tsv:
     threads: 20
     params:
         memory_per_thread="3G",
-        hc_soft_clip_script = srcdir("get_high_confidence_inserts_and_soft_clips.py"),
-        hc_bed=get_hc_bed_for_test
+        hc_soft_clip_script = srcdir("get_high_confidence_inserts_and_soft_clips.py")
     shell:
         "{config[python_dir]} {params.hc_soft_clip_script} --threads {threads} --sc 1 --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} > {output}"
 
@@ -241,8 +237,7 @@ rule get_high_confidence_inserts_tsv:
     threads: 20
     params:
         memory_per_thread="3G",
-        hc_insert_script = srcdir("get_high_confidence_inserts_and_soft_clips.py"),
-        hc_bed=get_hc_bed_for_test
+        hc_insert_script = srcdir("get_high_confidence_inserts_and_soft_clips.py") 
     shell:
         "{config[python_dir]} {params.hc_insert_script} --threads {threads} --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} > {output}"
 
