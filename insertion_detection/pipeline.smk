@@ -63,6 +63,10 @@ rule all_filtered_tsv:
     input:
         expand("{s}/read_analysis/{s}.{t}.read_insertions_and_soft_clipped.repbase_annotated.high_confidence.reference_filtered.tsv", t=config["tests"], s=config["samples"])
 
+rule all_insert_high_confidence_tsv:
+    input:
+        expand("{s}/read_analysis/{s}.{t}.read_insertions.repbase_annotated.high_confidence.tsv", t=config["tests"], s=config["samples"])
+
 #
 # Mapping rules
 #
