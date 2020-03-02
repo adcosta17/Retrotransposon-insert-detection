@@ -6,6 +6,7 @@ Split into two parts.
 
 A. Insertion Detection
   - Detecting novel retrotransposon insertions in long reads
+
 B. Insertion Validation
   - Methods to validate calls made by the Insertion Detection pipeline in A
 
