@@ -11,9 +11,6 @@ def get_base_reference_for_test(wildcards):
 def get_bed_for_test(wildcards):
     return config["bed_"+wildcards.test]
 
-def get_hc_bed_for_test(wildcards):
-    return config["hc_bed_"+wildcards.test]
-
 # Search fastq folder from config
 def get_sample_fastq(wildcards):
     path = config['base_dir'] + wildcards.sample + "/*.fastq.gz"
