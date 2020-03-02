@@ -1,0 +1,53 @@
+# List samples here
+samples:
+    - combined_sample
+
+# List tests here
+tests:
+    - all_rt
+
+min_insertion_length: 100
+max_distance_to_reference_insertion: 100
+
+base_dir:
+    /your/base/project/folder/
+
+repbase:
+    ./repbase_db/permisive_rebase.fa
+
+lastal_dir:
+    /path/to/lastal
+
+python_dir:
+    /path/to/python
+
+minimap_dir:
+    /path/to/minimap2
+
+samtools_dir:
+    /path/to/samtools
+
+base_ref:
+    /path/to/GRCh38.fna
+
+# Reference for test. Same as base ref normally
+reference_all:
+    /path/to/GRCh38.fna 
+
+insert_mapping_fraction:
+    0.7
+
+soft_clipped_mapping_fraction:
+    0.95
+
+soft_clip_length:
+    500
+
+hc_window_size:
+    200
+
+min_mapq_fraction:
+    0.5
+
+reference_tsv_to_filter:
+    /path/to/control/sample/tsv
