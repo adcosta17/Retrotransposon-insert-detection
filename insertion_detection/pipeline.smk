@@ -74,7 +74,7 @@ rule minimap2_align:
     input:
         get_sample_fastq
     output:
-        "{sample}/mapped/{sample}.{test}.sorted.bam"
+        protected("{sample}/mapped/{sample}.{test}.sorted.bam")
     params:
         memory_per_thread="10G",
         ref_to_use= get_reference_for_test,
@@ -116,8 +116,8 @@ rule run_get_filtered_bams:
         bam="{sample}/mapped/{sample}.{test}.sorted.bam",
         bam_index="{sample}/mapped/{sample}.{test}.sorted.bam.bai",
     output:
-        bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam",
-        merged_reads="{sample}/filtered_mapped/{sample}.{test}.merged_reads.txt"
+        protected(bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam"),
+        protected(merged_reads="{sample}/filtered_mapped/{sample}.{test}.merged_reads.txt")
     threads: 1
     params:
         merge_alignments_script = srcdir("merge_split_alignments.py"),
@@ -139,7 +139,7 @@ rule run_get_filtered_candidate_insertions:
         full_bam_index="{sample}/mapped/{sample}.{test}.sorted.bam.bai",
         merged_reads="{sample}/filtered_mapped/{sample}.{test}.merged_reads.txt"
     output:
-        "{sample}/read_analysis/{sample}.{test}.read_insertions.tsv"
+        temp("{sample}/read_analysis/{sample}.{test}.read_insertions.tsv")
     threads: 1
     params:
         candidate_insertion_script = srcdir("get_candidate_insertions.py"),
@@ -153,7 +153,7 @@ rule run_get_filtered_candidate_soft_clipped:
         bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam",
         bam_index="{sample}/filtered_mapped/{sample}.{test}.sorted.bam.bai"
     output:
-        "{sample}/read_analysis/{sample}.{test}.read_soft_clipped.tsv"
+        temp("{sample}/read_analysis/{sample}.{test}.read_soft_clipped.tsv")
     threads: 1
     params:
         candidate_insertion_script = srcdir("get_candidate_insertions_soft_clipped.py"),
@@ -166,7 +166,7 @@ rule run_convert_candidate_insertions_to_fasta:
     input:
         "{sample}/read_analysis/{sample}.{test}.read_insertions.tsv"
     output:
-        "{sample}/read_analysis/{sample}.{test}.read_insertions.fa"
+        temp("{sample}/read_analysis/{sample}.{test}.read_insertions.fa")
     threads: 1
     params:
         candidate_insertion_conversion_script = srcdir("convert_candidate_insertions_to_fasta.py"),
@@ -178,7 +178,7 @@ rule run_convert_candidate_soft_clipped_to_fasta:
     input:
         "{sample}/read_analysis/{sample}.{test}.read_soft_clipped.tsv"
     output:
-        "{sample}/read_analysis/{sample}.{test}.read_soft_clipped.fa"
+        temp("{sample}/read_analysis/{sample}.{test}.read_soft_clipped.fa")
     threads: 1
     params:
         candidate_insertion_conversion_script = srcdir("convert_candidate_insertions_to_fasta.py"),
@@ -192,7 +192,7 @@ rule run_candidate_soft_clipped_annotation:
         tsv="{sample}/read_analysis/{sample}.{test}.read_soft_clipped.tsv",
         tab="{sample}/read_analysis/{sample}.{test}.read_soft_clipped.mapped_to_repbase.last.tab"
     output:
-        "{sample}/read_analysis/{sample}.{test}.read_soft_clipped.repbase_annotated.tsv"
+        temp("{sample}/read_analysis/{sample}.{test}.read_soft_clipped.repbase_annotated.tsv")
     threads: 1
     params:
         candidate_insertion_annotation_script = srcdir("annotate_insertions_from_repbase.py"),
@@ -205,7 +205,7 @@ rule run_candidate_insertion_annotation:
         tsv="{sample}/read_analysis/{sample}.{test}.read_insertions.tsv",
         tab="{sample}/read_analysis/{sample}.{test}.read_insertions.mapped_to_repbase.last.tab"
     output:
-        "{sample}/read_analysis/{sample}.{test}.read_insertions.repbase_annotated.tsv"
+        temp("{sample}/read_analysis/{sample}.{test}.read_insertions.repbase_annotated.tsv")
     threads: 1
     params:
         candidate_insertion_annotation_script = srcdir("annotate_insertions_from_repbase.py"),
@@ -222,7 +222,7 @@ rule get_high_confidence_soft_clipped_tsv:
         "{sample}/read_analysis/{sample}.{test}.read_soft_clipped.repbase_annotated.high_confidence.tsv"
     threads: 20
     params:
-        memory_per_thread="3G",
+        memory_per_thread="6G",
         hc_soft_clip_script = srcdir("get_high_confidence_inserts_and_soft_clips.py")
     shell:
         "{config[python_dir]} {params.hc_soft_clip_script} --threads {threads} --sc 1 --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} > {output}"
@@ -236,7 +236,7 @@ rule get_high_confidence_inserts_tsv:
         "{sample}/read_analysis/{sample}.{test}.read_insertions.repbase_annotated.high_confidence.tsv"
     threads: 20
     params:
-        memory_per_thread="3G",
+        memory_per_thread="6G",
         hc_insert_script = srcdir("get_high_confidence_inserts_and_soft_clips.py") 
     shell:
         "{config[python_dir]} {params.hc_insert_script} --threads {threads} --tsv {input.tsv} --window-size {config[hc_window_size]} --min-mapq-fraction {config[min_mapq_fraction]} --read-to-reference-bam {input.bam} > {output}"

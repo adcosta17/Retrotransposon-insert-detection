@@ -72,7 +72,7 @@ with open(args.tsv) as in_tsv:
                 if line[8] == "PASS":
                     line[8] = "multimapped"
                 else:
-                    line[8] = line[8]+"multimapped"
+                    line[8] = line[8]+",multimapped"
         if line[0] not in regions:
             regions[line[0]] = defaultdict(list)
         regions[line[0]][str(start)+"-"+str(end)].append([line,0,0])
