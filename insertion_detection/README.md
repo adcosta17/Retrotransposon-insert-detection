@@ -21,7 +21,7 @@ The pipeline is run using snakemake with a config file specified
 ```sh
 # Setup:
 git clone https://github.com/adcosta17/Retrotransposon-insert-detection.git
-cd Retrotransposon-insert-detection
+cd Retrotransposon-insert-detection/insertion_detection
 
 # Usage: 
 snakemake -s pipeline.smk --configfile project_config.yaml <target>

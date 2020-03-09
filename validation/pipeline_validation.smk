@@ -39,6 +39,11 @@ rule all_spanning:
         expand("{s}/results/{s}.{t}.read_insertions.truth_set.{c}.tsv", t=config["tests"], s=config["samples"], c=config["chromosomes"]),
         expand("{s}/results/{s}.{t}.read_soft_clipped.truth_set.{c}.tsv", t=config["tests"], s=config["samples"], c=config["chromosomes"])
 
+rule all_combined:
+    input:
+        expand("{s}/results/{s}.{t}.read_insertions.truth_set.tsv", s=config["samples"], t=config["tests"]),
+        expand("{s}/results/{s}.{t}.read_soft_clipped.truth_set.tsv", s=config["samples"], t=config["tests"])
+
 
 
 # Rules
@@ -47,7 +52,7 @@ rule minimap2_align:
     input:
         get_sample_fastq
     output:
-        "{sample}/ref_mapped/{sample}.{test}.sorted.bam"
+        protected("{sample}/ref_mapped/{sample}.{test}.sorted.bam")
     params:
         memory_per_thread="10G",
         ref_to_use= get_base_reference_for_test,
@@ -69,17 +74,17 @@ rule minimap2_align:
 
 rule split_by_chrom:
     input:
-        "{sample}/ref_mapped/{sample}.{test}.sorted.bam",
+        bam="{sample}/ref_mapped/{sample}.{test}.sorted.bam",
         bam_index="{sample}/ref_mapped/{sample}.{test}.sorted.bam.bai"
     output:
-        "{sample}/ref_mapped/{sample}.{test}.sorted.{chrom}.bam"
+        temp("{sample}/ref_mapped/{sample}.{test}.sorted.{chrom}.bam")
     params:
         memory_per_thread="10G",
         chrom=get_chrom_for_test
     threads: 1
     shell:
         """
-        {config[samtools_dir]} view -b {input} "{params.chrom}" > {output}
+        {config[samtools_dir]} view -b {input.bam} "{params.chrom}" > {output}
         """
 
 
@@ -116,8 +121,8 @@ rule get_inserts_from_spanning_only:
         bam="{sample}/ref_mapped/{sample}.{test}.sorted.{chrom}.bam",
         bam_index="{sample}/ref_mapped/{sample}.{test}.sorted.{chrom}.bam.bai"
     output:
-        insert="{sample}/results/{sample}.{test}.spanning_only_inserts.{chrom}.txt",
-        sc="{sample}/results/{sample}.{test}.spanning_only_soft_clips.{chrom}.txt"
+        insert=temp("{sample}/results/{sample}.{test}.spanning_only_inserts.{chrom}.txt"),
+        sc=temp("{sample}/results/{sample}.{test}.spanning_only_soft_clips.{chrom}.txt")
     params:
         spanning_script = srcdir("get_all_spanning_reads.py"),
         wrapper = srcdir("bash_wrapper.sh"),
@@ -127,10 +132,10 @@ rule get_inserts_from_spanning_only:
     shell:
         "{params.wrapper} '{config[python_dir]} {params.spanning_script} --bed {params.bed_to_use} --threads {threads} --read-to-reference-bam {input.bam} --output-insert-list {output.insert} --output-sc-list {output.sc}'"
 
-rule combine_spanning_inserts:
+rule combine_truth_set:
     output:
-        insert="{sample}/results/{sample}.{test}.spanning_only_inserts.txt",
-        sc="{sample}/results/{sample}.{test}.spanning_only_soft_clips.txt"
+        insert="{sample}/results/{sample}.{test}.read_insertions.truth_set.tsv",
+        sc="{sample}/results/{sample}.{test}.read_soft_clipped.truth_set.tsv"
     threads: 1
     params:
         memory_per_thread="10G",
@@ -138,6 +143,8 @@ rule combine_spanning_inserts:
         test=get_test
     shell:
         """
-        cat {params.sample}/results/{params.sample}.{params.test}.spanning_only_inserts.c* >> {output.insert}
-        cat {params.sample}/results/{params.sample}.{params.test}.spanning_only_soft_clips.c* >> {output.sc}
+        cat {params.sample}/results/{params.sample}.{params.test}.read_insertions.truth_set.c* >> {output.insert}
+        rm {params.sample}/results/{params.sample}.{params.test}.read_insertions.truth_set.c*
+        cat {params.sample}/results/{params.sample}.{params.test}.read_soft_clipped.truth_set.c* >> {output.sc}
+        rm {params.sample}/results/{params.sample}.{params.test}.read_soft_clipped.truth_set.c*
         """
