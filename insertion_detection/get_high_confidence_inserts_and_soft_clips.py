@@ -18,9 +18,19 @@ def is_hc(intervaltrees, record):
         return False
     return True
 
+
+def update_annotation(annotation, update):
+    if annotation == "PASS":
+        annotation = update
+    else:
+        annotation = annotation+","+update
+    return annotation
+
 parser = argparse.ArgumentParser( description='Filter inserts and soft clips based on their mapped fraction of the best repbase hit and if they fall into a high confidence region and are flanked')
 parser.add_argument('--tsv', required=True)
 parser.add_argument('--read-to-reference-bam', required=True)
+parser.add_argument('--telomere-filter', required=True)
+parser.add_argument('--centromere-filter', required=True)
 parser.add_argument('--min-mapq', type=int, default=20)
 parser.add_argument('--window-size', type=int, default=50)
 parser.add_argument('--min-mapq-fraction', type=float, default=0)
@@ -32,20 +42,39 @@ threads_to_use = 1
 if args.threads > 1:
     threads_to_use = args.threads - 1
 
-mapped_count = {}
-annotated_count = {}
-sam_reader = pysam.AlignmentFile(args.read_to_reference_bam)
-for record in sam_reader.fetch():
-    if record.is_unmapped:
-        continue
-    if record.query_name not in mapped_count:
-        mapped_count[record.query_name] = 0
-    if record.mapping_quality >= 20:
-        mapped_count[record.query_name] += 1
+telomeres = defaultdict(IntervalTree)
+ceontromeres = defaultdict(IntervalTree)
 
-# Split the records in bins of size 10KB.
-# Done so that we can do the bam access in parallel and load regions once rather than per insert or all records at once
-# All at once is memory intensive, may not have enough. One at a time is very slow and the same region may be loaded multiple times
+with open(args.telomere_filter) as in_tf:
+    count = 0
+    for line in in_tf:
+        if count == 0:
+            count = 1
+            continue
+        line_args = line.strip().split('\t')
+        chrom = line_args[1]
+        start = int(line_args[2])
+        end = int(line_args[3])
+        key = chrom + ":" + str(start) + "-" + str(end)
+        telomeres[chrom][start:end] = key
+
+with open(args.centromere_filter) as in_cf:
+    count = 0
+    for line in in_cf:
+        if count == 0:
+            count = 1
+            continue
+        line_args = line.strip().split('\t')
+        chrom = line_args[1]
+        start = int(line_args[2])
+        end = int(line_args[3])
+        key = chrom + ":" + str(start) + "-" + str(end)
+        ceontromeres[chrom][start:end] = key
+
+# regions is a dict[chrom][region] = [(record, lowqual, total)]
+# Each region for a chromsosome is 10kb + window_size long, tsv records where the insert falls in that region are placed in it
+# During loop go through each chromosome's region list. Get bam records for region
+# Add to the tsv record counts for each bam that intersects +/- window_size bp of insert
 tsv_records = {}
 regions = {}
 pos = 0
@@ -66,13 +95,13 @@ with open(args.tsv) as in_tsv:
             start -= 10000
         start -= int(args.window_size)
         end = start + 10000 + 2*int(args.window_size)
-        # Do multimapped for softclips here
-        if args.sc:
-            if mapped_count[line[3]] > 1:
-                if line[8] == "PASS":
-                    line[8] = "multimapped"
-                else:
-                    line[8] = line[8]+",multimapped"
+        if len(ceontromeres[line[0]][int(line[1]):int(line[2])]) > 0:
+            line[8] = update_annotation(line[8], "in_centromere")
+        if len(telomeres[line[0]][int(line[1]):int(line[2])]) > 0:
+            line[8] = update_annotation(line[8], "in_telomere")
+        if "mapq<20" in line[8]:
+            print("\t".join(line))
+            continue
         if line[0] not in regions:
             regions[line[0]] = defaultdict(list)
         regions[line[0]][str(start)+"-"+str(end)].append([line,0,0])
@@ -138,19 +167,12 @@ for i in results:
     for chrom in res:
         for region in res[chrom]:
             for i in range(len(res[chrom][region])):
-                if res[chrom][region][i][2] == 0:
-                    updated_line = res[chrom][region][i][0]
-                    if updated_line[8] == "PASS":
-                        updated_line[8] = "mapq_fraction"
-                    else:
-                        updated_line[8] = updated_line[8]+",mapq_fraction"
-                    print("\t".join(updated_line) + "\t1")
-                elif float(res[chrom][region][i][1])/res[chrom][region][i][2] < args.min_mapq_fraction:
+                if float(res[chrom][region][i][1])/res[chrom][region][i][2] < args.min_mapq_fraction:
                     print("\t".join(res[chrom][region][i][0])+ "\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
                 else:
                     updated_line = res[chrom][region][i][0]
-                    if updated_line[8] == "PASS":
-                        updated_line[8] = "mapq_fraction"
+                    updated_line[8] = update_annotation(updated_line[8], "mapq_fraction")
+                    if res[chrom][region][i][2] == 0:
+                        print("\t".join(updated_line)+"\t1")
                     else:
-                        updated_line[8] = updated_line[8]+",mapq_fraction"
-                    print("\t".join(updated_line) +"\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
+                        print("\t".join(updated_line)+"\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))

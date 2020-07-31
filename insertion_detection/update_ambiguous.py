@@ -113,6 +113,14 @@ def multiple_families(family_count, read_name, insert_position):
         return True
     return False
 
+def get_family_str(family_count, read_name, insert_position):
+    ret = "ambiguous_mapping"
+    for item in family_count[read_name][insert_position]:
+        if family_count[read_name][insert_position][item] > 0:
+            ret = ret +"_"+item
+    return ret
+
+
 parser = argparse.ArgumentParser( description='Annotate .read_insertions.tsv with mappings of the insertion sequence to repbase')
 parser.add_argument('--input', required=True)
 parser.add_argument('--minimap2-paf', required=False)
@@ -135,22 +143,12 @@ with open(args.input) as csvfile:
         row_args = row.strip().split("\t")
         if count == 0:
             count = 1
-            print(row.strip()+"\t"+"annotation"+"\t"+"mapped_length"+"\t"+"fraction_mapped"+"\t"+"alignment_escore"+"\t"+"read_alignment_insert_start"+"\t"+"read_alignment_insert_end"+"\t"+"read_mapped_bases_total"+"\t"+"mapping_start"+"\t"+"mapping_end")
+            print(row.strip())
             continue
         annotation = RepbaseMapping("no_repbase_mapping", 0, 0, 0, 0, 0, 0, 0)
         # Get the best annotation for the read an the insert postion
         if row_args[3] in read_to_best_annotation:
             if str(row_args[4]+"-"+row_args[5]) in read_to_best_annotation[row_args[3]]:
-                annotation = read_to_best_annotation[row_args[3]][str(row_args[4]+"-"+row_args[5])]
                 if multiple_families(family_count, row_args[3], str(row_args[4]+"-"+row_args[5])):
-                    annotation.name = "ambiguous_mapping"
-        # Get total amount of bases covered by this annotation
-        mapped_total = get_mapped_total(annotation)
-        pass_fail = row_args[8]
-        if not annotation.frac_mapped > args.min_mapped_fraction:
-            if "PASS" in pass_fail:
-                pass_fail = "mapped_fraction"
-            else:
-                pass_fail = pass_fail + ",mapped_fraction"
-        row_args[8] = pass_fail
-        print("\t".join(row_args)+"\t"+str(annotation.name)+"\t"+str(annotation.mapped_length)+"\t"+str(annotation.frac_mapped)+"\t"+str(annotation.escore)+"\t"+str(annotation.start)+"\t"+str(annotation.end)+"\t"+str(mapped_total)+"\t"+str(annotation.mapping_start)+"\t"+str(annotation.mapping_end))
+                    row_args[9] = get_family_str(family_count, row_args[3], str(row_args[4]+"-"+row_args[5]))
+        print("\t".join(row_args))
