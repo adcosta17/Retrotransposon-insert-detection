@@ -17,3 +17,5 @@ B. Insertion Validation
 - minimap2
 - lastal
 - samtools
+- longshot
+- whatshap
