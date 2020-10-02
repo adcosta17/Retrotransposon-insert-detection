@@ -59,6 +59,8 @@ def get_start_end_string(record_1, record_2):
     # Remove any hard or soft clipped bases from the start of the read. This is our starting position
     # Next iterate over a cleaned cigar string to get how many bases in first half on read, add the indel size and then iterate over second cleaned cigar string
     # now we know length of read to traverse. Gen ends pos by adding length to start pos
+    if (record_1.is_reverse and not record_2.is_reverse) or (not record_1.is_reverse and record_2.is_reverse):
+        return [0,0]
     cg1_start = 0
     for cg in record_1.cigartuples:
         if cg[0] == 4:
@@ -66,6 +68,8 @@ def get_start_end_string(record_1, record_2):
             break
         elif cg[0] == 5:
             cg1_start += cg[1]
+        else:
+            break
     cg1_len = get_read_length_no_sc(record_1.cigartuples)
     cg1_end = cg1_start + cg1_len
     cg2_start = 0
@@ -75,6 +79,8 @@ def get_start_end_string(record_1, record_2):
             break
         elif cg[0] == 5:
             cg2_start += cg[1]
+        else:
+            break
     cg2_len = get_read_length_no_sc(record_2.cigartuples)
     cg2_end = cg2_start + cg2_len
     if record_1.is_reverse:
@@ -86,7 +92,7 @@ def get_start_end_string(record_1, record_2):
 
 parser = argparse.ArgumentParser( description='Remove insertions that are near insertions in a reference sample')
 parser.add_argument('--sample', required=True)
-parser.add_argument('--suffix', default=".all.read_insertions.repbase_annotated.high_confidence.chimeric_filtered.tsv")
+parser.add_argument('--suffix', default=".all.read_insertions.repbase_annotated.high_confidence.tsv")
 parser.add_argument('--folder', default="read_analysis")
 parser.add_argument('--bam-suffix', default=".sorted.phased.bam")
 parser.add_argument('--bam-folder', default="phased")
@@ -170,61 +176,71 @@ def get_mapq_reads(samples, regions, mapq_reads):
                     records_per_read[record.query_name].append(record)
     return records_per_read
 
-pool = ThreadPool(processes=int(threads_to_use))
-
 results = []
-for reg in regions_split:
-    async_result = pool.apply_async(get_seen_reads, (args.sample, regions_split[reg], seen_reads))
-    results.append(async_result)
-
 results_mapq = []
-for reg in regions_split:
-    async_result = pool.apply_async(get_mapq_reads, (args.sample, regions_split[reg], low_mapq))
-    results_mapq.append(async_result)
-
-#combine results
 records_per_read = defaultdict(list)
-for i in results:
-    res = i.get()
-    for read in res:
-        records_per_read[read].extend(res[read])
+if threads_to_use > 1:
+    pool = ThreadPool(processes=int(threads_to_use))
+    for reg in regions_split:
+        async_result = pool.apply_async(get_seen_reads, (args.sample, regions_split[reg], seen_reads))
+        results.append(async_result)
+    for reg in regions_split:
+        async_result = pool.apply_async(get_mapq_reads, (args.sample, regions_split[reg], low_mapq))
+        results_mapq.append(async_result)
+    #combine results
+    for i in results:
+        res = i.get()
+        for read in res:
+            records_per_read[read].extend(res[read])
+else:
+    for reg in regions_split:
+        results.append(get_seen_reads(args.sample, regions_split[reg], seen_reads))
+    for reg in regions_split:
+        results_mapq.append(get_mapq_reads(args.sample, regions_split[reg], low_mapq))
+    for i in results:
+        for read in i:
+            records_per_read[read].extend(i[read])   
 
 # have all of our reads, now check each one
 with open(args.insert_location_output,'w') as out_insert_loc:
     for read in seen_reads:
-        if read in merged_reads:
-            continue
+        #if read in merged_reads:
+        #    continue
         if len(records_per_read[read]) > 1:
             # Have more than one alignment for this read. See if there are two that are near each other
-            record_1 =  records_per_read[read][0]
-            i = 1
-            while i < len(records_per_read[read]):
-                record_2 = records_per_read[read][i]
-                if (record_1.reference_name == record_2.reference_name and 
-                    record_1.is_reverse == record_2.is_reverse and
-                    (record_1.reference_start - record_2.reference_end < 250 or
-                     record_2.reference_start - record_1.reference_end < 250) and
-                    (record_1.mapping_quality > args.min_mapq or record_2.mapping_quality > args.min_mapq)):
-                    # These records line up enough to possibly support a split mapping insert
-                    if record_1.reference_start > record_2.reference_start:
-                        insert_pos = get_start_end_string(record_2, record_1)
-                    else:
-                        insert_pos = get_start_end_string(record_1, record_2)
-                    # Have insert position for the read and where it should be. Intersect this with the tsv records I have seen
-                    # If there is an insert called that is fully contained by these positions, flag it
-                    for pos in seen_reads[read]:
-                        start = int(pos.split(':')[0])
-                        if insert_pos[0] < start and insert_pos[1] > start:
-                            # Flag this insert
-                            out_insert_loc.write("\t".join(seen_reads[read][pos])+"\n")
-                record_1 = record_2
-                i += 1
+            for i in range(0,len(records_per_read[read])):
+                record_1 =  records_per_read[read][i]
+                for j in range(i+1,len(records_per_read[read])):
+                    record_2 = records_per_read[read][j]
+                    if (record_1.reference_name == record_2.reference_name and 
+                        record_1.is_reverse == record_2.is_reverse and
+                        (abs(record_1.reference_start - record_2.reference_end) < 250 or
+                         abs(record_2.reference_start - record_1.reference_end) < 250) and
+                        (record_1.mapping_quality > args.min_mapq or record_2.mapping_quality > args.min_mapq)):
+                        # These records line up enough to possibly support a split mapping insert
+                        if record_1.reference_start > record_2.reference_start:
+                            insert_pos = get_start_end_string(record_2, record_1)
+                        else:
+                            insert_pos = get_start_end_string(record_1, record_2)
+                        # Have insert position for the read and where it should be. Intersect this with the tsv records I have seen
+                        # If there is an insert called that is fully contained by these positions, flag it
+                        for pos in seen_reads[read]:
+                            start = int(pos.split(':')[0])
+                            if insert_pos[0] < start and insert_pos[1] > start:
+                                # Flag this insert
+                                out_insert_loc.write("\t".join(seen_reads[read][pos])+"\n")
+
 
 records_per_read = defaultdict(list)
-for i in results_mapq:
-    res = i.get()
-    for read in res:
-        records_per_read[read].extend(res[read])
+if threads_to_use > 1:
+    for i in results_mapq:
+        res = i.get()
+        for read in res:
+            records_per_read[read].extend(res[read])
+else:
+    for i in results_mapq:
+        for read in i:
+            records_per_read[read].extend(i[read])
 
 # have all of our reads, now check each one
 with open(args.low_mapq_output,'w') as out_low_mapq:

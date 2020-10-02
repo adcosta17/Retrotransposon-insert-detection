@@ -167,12 +167,13 @@ for i in results:
     for chrom in res:
         for region in res[chrom]:
             for i in range(len(res[chrom][region])):
-                if float(res[chrom][region][i][1])/res[chrom][region][i][2] < args.min_mapq_fraction:
+                if res[chrom][region][i][2] == 0:
+                    updated_line = res[chrom][region][i][0]
+                    updated_line[8] = update_annotation(updated_line[8], "mapq_fraction")
+                    print("\t".join(updated_line)+"\t1")
+                elif float(res[chrom][region][i][1])/res[chrom][region][i][2] < args.min_mapq_fraction:
                     print("\t".join(res[chrom][region][i][0])+ "\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
                 else:
                     updated_line = res[chrom][region][i][0]
                     updated_line[8] = update_annotation(updated_line[8], "mapq_fraction")
-                    if res[chrom][region][i][2] == 0:
-                        print("\t".join(updated_line)+"\t1")
-                    else:
-                        print("\t".join(updated_line)+"\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))
+                    print("\t".join(updated_line)+"\t"+str(float(res[chrom][region][i][1])/res[chrom][region][i][2]))

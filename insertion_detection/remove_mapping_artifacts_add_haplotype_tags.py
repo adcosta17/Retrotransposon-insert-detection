@@ -18,15 +18,31 @@ def is_hc(intervaltrees, record):
         return False
     return True
 
-parser = argparse.ArgumentParser( description='Remove inserts where the insertion sequence maps to a location where the read also maps to with sufficent mapq')
+def update_annotation(annotation, update):
+    if annotation == "PASS":
+        annotation = update
+    else:
+        annotation = annotation+","+update
+    return annotation
+
+parser = argparse.ArgumentParser( description='Remove mapping_artifacts and add haplotype tags to insert records')
 parser.add_argument('--tsv', required=True)
 parser.add_argument('--full-bam', required=True)
 parser.add_argument('--insert-bam', required=True)
 parser.add_argument('--min-mapq', type=int, default=20)
+parser.add_argument('--insert-filter', required=True)
 args = parser.parse_args()
 
 # Get all the inserts that will have mapped inserts
 # Exclude those that have mapq below the required 20 and min_insert length
+
+insert_filter = {}
+with open(args.insert_filter) as in_filter:
+    for row in in_filter:
+        row_args = row.strip().split("\t")
+        if row_args[0] not in insert_filter:
+            insert_filter[row_args[0]] = {}
+        insert_filter[row_args[0]][row_args[1]+":"+row_args[2]] = row_args
 
 reads_to_use = defaultdict(int)
 # Read in tsv first
@@ -102,6 +118,13 @@ with open(args.tsv) as in_tsv:
                 line_args.append("0")
         else:
             line_args.append("0")
+        if line_args[0] in insert_filter:
+            # Check to see if insert is in the insert filter set
+            for item in insert_filter[line_args[0]]:
+                if line_args[3] == insert_filter[line_args[0]][item][3] and abs(int(line_args[1]) - int(insert_filter[line_args[0]][item][1])) <= 20 and abs(int(line_args[2]) - int(insert_filter[line_args[0]][item][2])) <= 20:
+                    # Failure
+                    line_args[8] = update_annotation(line_args[8], "insert_filter")
+                    break
         if "mapq<20" in line_args[8] or "min_insertion_length" in line_args[8]:
             # Don't need to check these inserts. Add them to the output as is
             print("\t".join(line_args))
@@ -118,10 +141,7 @@ with open(args.tsv) as in_tsv:
                         chimeric_fail = True
                         break
         if chimeric_fail:
-            if line_args[8] == "PASS":
-                line_args[8] = "possible_chimera"
-            else:
-                line_args[8] = line_args[8]+",possible_chimera"
+            line_args[8] = update_annotation(line_args[8], "possible_chimera")
         print("\t".join(line_args))
 
 

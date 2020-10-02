@@ -185,25 +185,8 @@ parser.add_argument('--max-distance', type=int, default=100)
 parser.add_argument('--max-common', type=int, default=1)
 parser.add_argument('--sample-count', type=int, default=1)
 parser.add_argument('--num-samples-needed-to-remove', type=int, default=1)
-parser.add_argument('--insert-filter', required=True)
-parser.add_argument('--low-mapq-filter', required=True)
 args = parser.parse_args()
 
-insert_filter = {}
-with open(args.insert_filter) as in_filter:
-    for row in in_filter:
-        row_args = row.strip().split("\t")
-        if row_args[0] not in insert_filter:
-            insert_filter[row_args[0]] = {}
-        insert_filter[row_args[0]][row_args[1]+":"+row_args[2]] = row_args
-
-mapq_0_filter = {}
-with open(args.low_mapq_filter) as in_filter:
-    for row in in_filter:
-        row_args = row.strip().split("\t")
-        if row_args[0] not in mapq_0_filter:
-            mapq_0_filter[row_args[0]] = {}
-        mapq_0_filter[row_args[0]][row_args[1]+":"+row_args[2]] = row_args
 
 # Read each multi-ref-filter-tsv and set up a dict for each
 # Use exact positions, but store the number of inserts found nearby for each haplotype + fails
@@ -289,14 +272,14 @@ with open(args.input) as csvfile:
                 format_and_print_line_insert_dict(insert_dict, row_args, "ref_control_sample")
                 continue
             # Remaining inserts should only be ones for which no passing insert is found in the ref control sample
-            insert_dict = large_filter[chrom][key]["inserts"]
+            insert_dict = x_large_filter[chrom][key]["inserts"]
             total_inserts = 0
             for insert in insert_dict[args.sample]:
                 if insert == "fail":
                     continue
                 total_inserts += insert_dict[args.sample][insert]
             total_haplotyped = 0
-            haplotype_dict = large_filter[chrom][key]["haplotypes"]
+            haplotype_dict = x_large_filter[chrom][key]["haplotypes"]
             for insert in haplotype_dict[args.sample]:
                 total_haplotyped += haplotype_dict[args.sample][insert]
             if len(row_args) == 19:
@@ -305,120 +288,113 @@ with open(args.input) as csvfile:
                 hp = row_args[19]
             if hp == "0":
                 # Insert is on a read that isn't haplotyped. Check to see if there are inserts in the region that are haplotyped
-                if total_inserts == insert_dict[args.sample][hp] and total_haplotyped == haplotype_dict[args.sample][hp]:
+                #if total_inserts == insert_dict[args.sample][hp] and total_haplotyped == haplotype_dict[args.sample][hp]:
                     # All inserts and reads are from same haplotype on sample and no haplotype has been called
                     # If at least 30% of the reads have inserts, then its likley that this is more polymorphic than a hotspot
-                    if float(total_inserts)/total_haplotyped > 0.3:
-                        format_and_print_line_insert_dict(insert_dict, row_args, "No_haplotype_likely_polymorphic")
-                        continue
+                    #if float(total_inserts)/total_haplotyped >= 0.5:
+                    #    format_and_print_line_insert_dict(insert_dict, row_args, "No_haplotype_likely_polymorphic")
+                    #    continue
                     # Otherwise we need to check every other sample and see if they have the same trend at this position.
                     # If all samples have no haplotyped reads at this position, and more than 30% of reads have an insert:
                     # Flag as polymorphic rather than hotspot
-                    all_sample_insert_count = total_inserts
-                    all_sample_hap_count = total_haplotyped
-                    other_inserts_hap = False
-                    other_samples_hap = False
-                    for sample in insert_dict:
-                        if sample == args.sample or sample == args.ref_sample:
-                            continue
-                        all_sample_insert_count += insert_dict[sample]["0"]
-                        if insert_dict[sample]["1"] != 0 or insert_dict[sample]["2"] != 0:
-                            other_inserts_hap = True
+                all_sample_insert_count = total_inserts
+                all_sample_hap_count = total_haplotyped
+                other_inserts_hap = False
+                other_samples_hap = False
+                for sample in insert_dict:
+                    if sample == args.sample or sample == args.ref_sample:
+                        continue
+                    all_sample_insert_count += insert_dict[sample]["0"]
+                    if insert_dict[sample]["1"] != 0 or insert_dict[sample]["2"] != 0:
+                        other_inserts_hap = True
+                    if sample in haplotype_dict:
                         all_sample_hap_count += haplotype_dict[sample]["0"]
                         if haplotype_dict[sample]["1"] != 0 or haplotype_dict[sample]["2"] != 0:
                             other_samples_hap = True
-                    if other_inserts_hap or other_samples_hap:
-                        # There are haplotyped reads in the other samples at this position, default to a failure case as below
-                        format_and_print_line_insert_dict(insert_dict, row_args, "likely_alignment_mistake_multi_sample")
-                        continue
-                    elif float(all_sample_insert_count)/all_sample_hap_count > 0.3:
-                        format_and_print_line_insert_dict(insert_dict, row_args, "No_haplotype_likely_polymorphic_multi_sample")
-                        continue
-                    else:
-                        # Need to now check a tight window for failure inserts on the reference sample.
-                        ref_count = 0
-                        insert_dict_small = small_filter[chrom][key]["inserts"]
-                        if args.ref_sample in insert_dict_small:
-                            ref_count = insert_dict_small[args.ref_sample]["0"] + insert_dict_small[args.ref_sample]["1"] + insert_dict_small[args.ref_sample]["2"] + insert_dict_small[args.ref_sample]["fail"]
-                        if ref_count > 0:
-                            # have an insert in ref_control sample, filter is out
-                            format_and_print_line_insert_dict(insert_dict_small, row_args, "ref_control_sample_fail")
-                            continue
-                        found = False
-                        if row_args[0] in insert_filter:
-                            # Check to see if insert is in the insert filter set
-                            for item in insert_filter[row_args[0]]:
-                                if row_args[3] == insert_filter[row_args[0]][item][3] and abs(int(row_args[1]) - int(insert_filter[row_args[0]][item][1])) <= 20 and abs(int(row_args[2]) - int(insert_filter[row_args[0]][item][2])) <= 20:
-                                    # Failure
-                                    found = True
-                                    format_and_print_line_insert_dict(insert_dict_small, row_args, "insert_filter_fail")
-                                    break
-                        if row_args[0] in mapq_0_filter and not found:
-                            for item in mapq_0_filter[row_args[0]]:
-                                if abs(int(row_args[1]) - int(mapq_0_filter[row_args[0]][item][1])) <= 20 and abs(int(row_args[2]) - int(mapq_0_filter[row_args[0]][item][2])) <= 20:
-                                    found = True
-                                    format_and_print_line_insert_dict(insert_dict_small, row_args, "mapq_0_filter_fail")
-                                    break
-                        if not found:
-                            row_args.append("insert\thap_0_pass")
-                            print("\t".join(row_args))
-                        continue
+                #if other_inserts_hap:
+                #    # There are haplotyped reads in the other samples at this position, default to a failure case as below
+                #    format_and_print_line_insert_dict(insert_dict, row_args, "likely_alignment_mistake_multi_sample")
+                #    continue
+                if float(all_sample_insert_count)/all_sample_hap_count >= 0.8:
+                    format_and_print_line_insert_dict(insert_dict, row_args, "No_haplotype_likely_polymorphic_multi_sample")
+                    continue
                 else:
-                    # We have inserts found within the window on other reads in the region and sample that are haployped
-                    # Likely an error. Flag and remove
-                    if total_inserts != insert_dict[args.sample][hp]:
-                        format_and_print_line_insert_dict(insert_dict, row_args, "likely_alignment_mistake_single")
+                    # Need to now check a tight window for failure inserts on the reference sample.
+                    ref_count = 0
+                    insert_dict_small = small_filter[chrom][key]["inserts"]
+                    if args.ref_sample in insert_dict_small:
+                        ref_count = insert_dict_small[args.ref_sample]["0"] + insert_dict_small[args.ref_sample]["1"] + insert_dict_small[args.ref_sample]["2"] + insert_dict_small[args.ref_sample]["fail"]
+                    if ref_count > 0:
+                        # have an insert in ref_control sample, filter is out
+                        format_and_print_line_insert_dict(insert_dict_small, row_args, "ref_control_sample_fail")
                         continue
-                    else:
-                        ref_count = 0
-                        insert_dict_small = small_filter[chrom][key]["inserts"]
-                        if args.ref_sample in insert_dict_small:
-                            ref_count = insert_dict_small[args.ref_sample]["0"] + insert_dict_small[args.ref_sample]["1"] + insert_dict_small[args.ref_sample]["2"] + insert_dict_small[args.ref_sample]["fail"]
-                        if ref_count > 0:
-                            # have an insert in ref_control sample, filter is out
-                            format_and_print_line_insert_dict(insert_dict_small, row_args, "ref_control_sample_fail")
+                    total_inserts = 0
+                    for sample in insert_dict:
+                        if sample == args.sample:
                             continue
-                        found = False
-                        if row_args[0] in insert_filter:
-                            # Check to see if insert is in the insert filter set
-                            for item in insert_filter[row_args[0]]:
-                                if row_args[3] == insert_filter[row_args[0]][item][3] and abs(int(row_args[1]) - int(insert_filter[row_args[0]][item][1])) <= 20 and abs(int(row_args[2]) - int(insert_filter[row_args[0]][item][2])) <= 20:
-                                    # Failure
-                                    found = True
-                                    format_and_print_line_insert_dict(insert_dict_small, row_args, "insert_filter_fail")
-                                    break
-                        if row_args[0] in mapq_0_filter and not found:
-                            for item in mapq_0_filter[row_args[0]]:
-                                if abs(int(row_args[1]) - int(mapq_0_filter[row_args[0]][item][1])) <= 20 and abs(int(row_args[2]) - int(mapq_0_filter[row_args[0]][item][2])) <= 20:
-                                    found = True
-                                    format_and_print_line_insert_dict(insert_dict_small, row_args, "mapq_0_filter_fail")
-                                    break
-                        if not found:
-                            row_args.append("insert\thap_0_pass_2")
-                            print("\t".join(row_args))
-                        continue
+                        total_inserts += insert_dict[sample]["0"]
+                        total_inserts += insert_dict[sample]["1"]
+                        total_inserts += insert_dict[sample]["2"]
+                    if total_inserts == 0:
+                        row_args.append("insert\thap_0_pass\tnovel")
+                    else:
+                        row_args.append("insert\thap_0_pass\thotspot")
+                    print("\t".join(row_args))
+                    continue
+#                else:
+#                    # We have inserts found within the window on other reads in the region and sample that are haployped
+#                    # Likely an error. Flag and remove
+#                    all_sample_insert_count = total_inserts
+#                    all_sample_hap_count = total_haplotyped
+#                    other_inserts_hap = False
+#                    other_samples_hap = False
+#                    for sample in insert_dict:
+#                        if sample == args.sample or sample == args.ref_sample:
+#                            continue
+#                        all_sample_insert_count += insert_dict[sample]["0"]
+#                        if insert_dict[sample]["1"] != 0 or insert_dict[sample]["2"] != 0:
+#                            other_inserts_hap = True
+#                        all_sample_hap_count += haplotype_dict[sample]["0"]
+#                        if haplotype_dict[sample]["1"] != 0 or haplotype_dict[sample]["2"] != 0:
+#                            other_samples_hap = True
+#                    if other_inserts_hap:
+#                        # There are haplotyped reads in the other samples at this position, default to a failure case as below
+#                        format_and_print_line_insert_dict(insert_dict, row_args, "likely_alignment_mistake_multi_sample")
+#                        continue
+#                    else:
+#                        ref_count = 0
+#                        insert_dict_small = small_filter[chrom][key]["inserts"]
+#                        if args.ref_sample in insert_dict_small:
+#                            ref_count = insert_dict_small[args.ref_sample]["0"] + insert_dict_small[args.ref_sample]["1"] + insert_dict_small[args.ref_sample]["2"] + insert_dict_small[args.ref_sample]["fail"]
+#                        if ref_count > 0:
+#                            # have an insert in ref_control sample, filter is out
+#                            format_and_print_line_insert_dict(insert_dict_small, row_args, "ref_control_sample_fail")
+#                            continue
+#                        row_args.append("insert\thap_0_pass_2")
+#                        print("\t".join(row_args))
+#                        continue
             # Insert here is on a read that is haplotyped
             # See if a majority of reads that are of this haplotype contain an insert and if the insert is shared between both haplotypes
             # If we see > 50% of reads of the haplotype and only this haplotype with an insert than polymorphic
             # If inserts found here on both haplotypes, then dig deeper
-            hp_insert_fraction = float(insert_dict[args.sample][hp])/haplotype_dict[args.sample][hp]
-            other_hp_insert_fraction = 0
-            if hp == "1" and haplotype_dict[args.sample]["2"] > 0:
-                other_hp_insert_fraction = float(insert_dict[args.sample]["2"])/haplotype_dict[args.sample]["2"]
-            elif hp == "2" and haplotype_dict[args.sample]["1"] > 0:
-                other_hp_insert_fraction = float(insert_dict[args.sample]["1"])/haplotype_dict[args.sample]["1"]
+#            hp_insert_fraction = float(insert_dict[args.sample][hp])/haplotype_dict[args.sample][hp]
+#            other_hp_insert_fraction = 0
+#            if hp == "1" and haplotype_dict[args.sample]["2"] > 0:
+#                other_hp_insert_fraction = float(insert_dict[args.sample]["2"])/haplotype_dict[args.sample]["2"]
+#            elif hp == "2" and haplotype_dict[args.sample]["1"] > 0:
+#                other_hp_insert_fraction = float(insert_dict[args.sample]["1"])/haplotype_dict[args.sample]["1"]
             # Check to see if insert is haplotype specific, and at what fraction
             # make sure that at least half the reads are haplotyped at this position
             total_called_hp = haplotype_dict[args.sample]["1"] + haplotype_dict[args.sample]["2"]
-            hp_total_fraction = float(total_called_hp)/(total_called_hp + haplotype_dict[args.sample]["0"])
-            if hp_insert_fraction > 0.5 and other_hp_insert_fraction < 0.1:# and hp_total_fraction > 0.5:
-                # insert is likely haplotype specific within sample. Call polymporphic
-                format_and_print_line_insert_dict(insert_dict, row_args, "liklely_haplotype_specific_single_hp")
-                continue
-            elif hp_insert_fraction > 0.5 and other_hp_insert_fraction > 0.5:# and hphp_total_fraction > 0.5:
-                # Insert appears in both haplotypes
-                format_and_print_line_insert_dict(insert_dict, row_args, "liklely_polymorphic_both_hp")
-                continue
+#            hp_total_fraction = float(total_called_hp)/(total_called_hp + haplotype_dict[args.sample]["0"])
+#            if hp_insert_fraction >= 0.5 and other_hp_insert_fraction < 0.1:# and hp_total_fraction > 0.5:
+#                # insert is likely haplotype specific within sample. Call polymporphic
+#                format_and_print_line_insert_dict(insert_dict, row_args, "liklely_haplotype_specific_single_hp")
+#                continue
+#            elif hp_insert_fraction >= 0.5 and other_hp_insert_fraction >= 0.5:# and hphp_total_fraction > 0.5:
+#                # Insert appears in both haplotypes
+#                format_and_print_line_insert_dict(insert_dict, row_args, "liklely_polymorphic_both_hp")
+#                continue
             # If we get here we have an insert that is haplotyped, but not enough inserts on a haplotype to call it polymorphic
             # Check the other samples and repeat checks. If we do get more than 50% of inserts on a haplotype over all samples at region, call polymorphic
             hp_insert_count = insert_dict[args.sample][hp]
@@ -437,15 +413,16 @@ with open(args.input) as csvfile:
                 if sample == args.sample or sample == args.ref_sample:
                     continue
                 hp_insert_count += insert_dict[sample][hp]
-                hp_total_count += haplotype_dict[sample][hp]
-                if hp == "1":
-                    other_hp_insert_count += insert_dict[sample]["2"]
-                    other_hp_total_count += haplotype_dict[sample]["2"]
-                elif hp == "2":
-                    other_hp_insert_count += insert_dict[sample]["1"]
-                    other_hp_total_count += haplotype_dict[sample]["1"]
-                all_read_count += haplotype_dict[sample]["0"] + haplotype_dict[sample]["1"] + haplotype_dict[sample]["2"]
-                total_called_hp += haplotype_dict[sample]["1"] + haplotype_dict[sample]["2"]
+                if sample in haplotype_dict:
+                    hp_total_count += haplotype_dict[sample][hp]
+                    if hp == "1":
+                        other_hp_insert_count += insert_dict[sample]["2"]
+                        other_hp_total_count += haplotype_dict[sample]["2"]
+                    elif hp == "2":
+                        other_hp_insert_count += insert_dict[sample]["1"]
+                        other_hp_total_count += haplotype_dict[sample]["1"]
+                    all_read_count += haplotype_dict[sample]["0"] + haplotype_dict[sample]["1"] + haplotype_dict[sample]["2"]
+                    total_called_hp += haplotype_dict[sample]["1"] + haplotype_dict[sample]["2"]
             hp_insert_fraction = 0
             other_hp_insert_fraction = 0
             total_called_hp_fraction = 0
@@ -455,19 +432,19 @@ with open(args.input) as csvfile:
                 other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count
             if all_read_count > 0:
                 total_called_hp_fraction = float(total_called_hp)/all_read_count
-            if hp_insert_fraction > 0.3 and other_hp_insert_fraction < 0.1:# and total_called_hp_fraction > 0.5:
+            if hp_insert_fraction >= 0.8 and other_hp_insert_fraction < 0.2:# and total_called_hp_fraction > 0.5:
                 # Likely polymorphic when looking at all non reference control samples
                 format_and_print_line_insert_dict(insert_dict, row_args, "liklely_polymorphic_single_hp_multi_sample")
                 continue
-            elif hp_insert_fraction > 0.3 and other_hp_insert_fraction > 0.3:# and total_called_hp_fraction > 0.5:
+            elif hp_insert_fraction >= 0.8 and other_hp_insert_fraction >= 0.8:# and total_called_hp_fraction > 0.5:
                 # Likely polymorphic when looking at all non reference control samples, both hp
                 format_and_print_line_insert_dict(insert_dict, row_args, "liklely_polymorphic_both_hp_multi_sample")
                 continue
             # If here we don't have enough haplotyped reads to make the call, or we don't see enough inserts specific to a haplotype
             # Check to see if there are many haplotype specific softclips
-            insert_dict = large_filter[chrom][key]["inserts"]
-            haplotype_dict = large_filter[chrom][key]["haplotypes"]
-            softclip_dict = large_filter[chrom][key]["softclips"]
+            insert_dict = x_large_filter[chrom][key]["inserts"]
+            haplotype_dict = x_large_filter[chrom][key]["haplotypes"]
+            softclip_dict = x_large_filter[chrom][key]["softclips"]
             hp_insert_count = insert_dict[args.sample][hp]
             if args.sample in softclip_dict:
                 hp_insert_count += softclip_dict[args.sample][hp]
@@ -508,11 +485,11 @@ with open(args.input) as csvfile:
                 hp_insert_fraction = float(hp_insert_count)/hp_total_count
             if other_hp_total_count > 0:
                 other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count
-            if hp_insert_fraction > 0.75 and other_hp_insert_fraction < 0.2:# and total_called_hp_fraction > 0.5:
+            if hp_insert_fraction > 0.8 and other_hp_insert_fraction < 0.2:# and total_called_hp_fraction > 0.5:
                 # Likely polymorphic when looking at all non reference control samples
                 format_and_print_line_insert_dict(insert_dict, row_args, "liklely_polymorphic_single_hp_multi_sample_softclip")
                 continue
-            elif hp_insert_fraction > 0.75 and other_hp_insert_fraction > 0.75:# and total_called_hp_fraction > 0.5:
+            elif hp_insert_fraction > 0.8 and other_hp_insert_fraction > 0.8:# and total_called_hp_fraction > 0.5:
                 # Likely polymorphic when looking at all non reference control samples, both hp
                 format_and_print_line_insert_dict(insert_dict, row_args, "liklely_polymorphic_both_hp_multi_sample_softclip")
                 continue
@@ -526,21 +503,15 @@ with open(args.input) as csvfile:
                 # have an insert in ref_control sample, filter is out
                 format_and_print_line_insert_dict(insert_dict_small, row_args, "ref_control_sample_fail")
                 continue
-            found = False
-            if row_args[0] in insert_filter:
-                # Check to see if insert is in the insert filter set
-                for item in insert_filter[row_args[0]]:
-                    if row_args[3] == insert_filter[row_args[0]][item][3] and abs(int(row_args[1]) - int(insert_filter[row_args[0]][item][1])) <= 20 and abs(int(row_args[2]) - int(insert_filter[row_args[0]][item][2])) <= 20:
-                        # Failure
-                        found = True
-                        format_and_print_line_insert_dict(insert_dict_small, row_args, "insert_filter_fail")
-                        break
-            if row_args[0] in mapq_0_filter and not found:
-                for item in mapq_0_filter[row_args[0]]:
-                    if abs(int(row_args[1]) - int(mapq_0_filter[row_args[0]][item][1])) <= 20 and abs(int(row_args[2]) - int(mapq_0_filter[row_args[0]][item][2])) <= 20:
-                        found = True
-                        format_and_print_line_insert_dict(insert_dict_small, row_args, "mapq_0_filter_fail")
-                        break
-            if not found:
-                row_args.append("insert\tpassed_hp_check")
-                print("\t".join(row_args))
+            total_inserts = 0
+            for sample in insert_dict:
+                if sample == args.sample:
+                    continue
+                total_inserts += insert_dict[sample]["0"]
+                total_inserts += insert_dict[sample]["1"]
+                total_inserts += insert_dict[sample]["2"]
+            if total_inserts == 0:
+                row_args.append("insert\tpassed_hp_check\tnovel")
+            else:
+                row_args.append("insert\tpassed_hp_check\thotspot")
+            print("\t".join(row_args))

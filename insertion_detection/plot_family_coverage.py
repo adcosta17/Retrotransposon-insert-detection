@@ -44,7 +44,9 @@ with open(args.input) as csvfile:
         if count == 0:
             count = 1
             continue
-        if row_args[8] == "PASS" and row_args[19] == "insert":
+        if row_args[8] == "PASS":# and row_args[19] == "insert":
+            if row_args[9] not in repbase_lengths:
+                continue
             start = int((int(row_args[16])/repbase_lengths[row_args[9]])*100)
             end = int((int(row_args[17])/repbase_lengths[row_args[9]])*100)
             i = start

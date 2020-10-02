@@ -108,6 +108,21 @@ for record in sam_reader.fetch():
                 read_end = tmp
             records_to_output[record.query_name].append(["%s\t%d\t%d\t%s\t%d\t%d\t%.1f\t%s" % (record.reference_name, ref_start, ref_end, record.query_name, read_start, read_end, sdust_score, insertion_sequence), annotation])
 
+    if record.query_name in records_to_output:
+        # Have at least one insertion for this read
+        # Parse throught the record and find any deletions > 100 bp
+        deletion_positions = get_deletion_pos(record.cigarstring)
+        if len(deletion_positions) == 0:
+            continue
+        for i in range(len(records_to_output[record.query_name])):
+            annotation = records_to_output[record.query_name][i][1]
+            line_arr = records_to_output[record.query_name][i][0].split('\t')
+            for del_pos in deletion_positions:
+                if ((abs(del_pos[0] - int(line_arr[4])) < 2*del_pos[1] or abs(del_pos[0] - int(line_arr[5])) < 2*del_pos[1]) and 
+                    (int(line_arr[5]) - int(line_arr[4]))*0.75 < del_pos[1]):
+                    # update the annotation to indicate a possible nearby deletion => mapping artifact
+                    annotation = update_annotation(annotation, "deletion_possible_mapping_artifact")
+                    records_to_output[record.query_name][i][1] = annotation
 
 for read in records_to_output:
     for item in records_to_output[read]:
