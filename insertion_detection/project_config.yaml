@@ -6,8 +6,14 @@ samples:
 tests:
     - all_rt
 
+samples_csv:
+    samples,as,a,csv,list
+
+reference_sample: control_sample_name
 min_insertion_length: 100
-max_distance_to_reference_insertion: 100
+max_distance_to_reference_insertion: 50
+min_mapq: 20
+min_detected_inclusion_length: 50
 
 base_dir:
     /your/base/project/folder/
@@ -35,19 +41,32 @@ reference_all:
     /path/to/GRCh38.fna 
 
 insert_mapping_fraction:
-    0.7
-
-soft_clipped_mapping_fraction:
-    0.95
-
-soft_clip_length:
-    500
+    0
 
 hc_window_size:
-    200
+    100
 
 min_mapq_fraction:
-    0.5
+    1.0
+
+xlarge_window:
+  500
+
+large_window:
+  200
+
+medium_window:
+  50
+
+small_window:
+  20
+
+telomere_filter:
+    hg38_telomeres.tsv
+
+centromere_filter:
+    hg38_centromeres.tsv
+
 
 reference_tsv_to_filter:
     /path/to/control/sample/tsv

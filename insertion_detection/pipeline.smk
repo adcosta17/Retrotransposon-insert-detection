@@ -31,9 +31,6 @@ def get_plot_dir(wildcards):
 def get_sample_name(wildcards):
     return wildcards.sample
 
-def get_suffix(wildcards):
-    return "all.read_insertions.repbase_annotated.mapq_ct_filtered.read_length.tsv"
-
 def get_old_tsv(wildcards):
     return "Oct12_tsvs/"+wildcards.sample+".read_insertions.repbase_annotated.reference_filtered.tsv"
 
@@ -86,14 +83,6 @@ rule all_repbase_annotated_tsv:
 rule all_mapq_ct_filtered_tsv:
     input:
         expand("{s}/read_analysis/{s}.{t}.read_insertions.repbase_annotated.mapq_ct_filtered.tsv", t=config["tests"], s=config["samples"])
-
-rule all_read_length_filtered_tsv:
-    input:
-        expand("{s}/read_analysis/{s}.{t}.read_insertions.repbase_annotated.mapq_ct_filtered.read_length.tsv", t=config["tests"], s=config["samples"])
-
-rule all_filtered_tsv:
-    input:
-        expand("{s}/read_analysis/{s}.{t}.read_insertions.repbase_annotated.mapq_ct_filtered.read_length.reference_filtered.tsv", t=config["tests"], s=config["samples"])
 
 rule all_ma_filtered_tsv:
     input:
