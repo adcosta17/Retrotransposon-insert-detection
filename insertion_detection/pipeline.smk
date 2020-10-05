@@ -149,13 +149,13 @@ rule minimap2_align:
     input:
         get_sample_fastq
     output:
-        protected("{sample}/mapped/{sample}.{test}.sorted.bam")
+        protected("{sample}/mapped/{sample}.sorted.bam")
     params:
         memory_per_thread="10G",
-        ref_to_use= get_reference_for_test,
+        ref_to_use= get_reference_base,
         input_fastq_folder=get_sample_fastq_folder,
-        tmp_loc="{sample}/mapped/{sample}.{test}.tmp",
-        tmp_output="{sample}/mapped/{sample}.{test}.sorted.tmp.bam"
+        tmp_loc="{sample}/mapped/{sample}.tmp",
+        tmp_output="{sample}/mapped/{sample}.sorted.tmp.bam"
     threads: 20
     shell:
         """
@@ -208,19 +208,20 @@ rule run_get_filtered_bams:
         """
 
 rule run_get_filtered_candidate_insertions:
+    input:
+        bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam",
+        bam_index="{sample}/filtered_mapped/{sample}.{test}.sorted.bam.bai"
     output:
         "{sample}/read_analysis/{sample}.{test}.read_insertions.tsv"
     threads: 1
     params:
-        bam="{sample}/filtered_mapped/{sample}.{test}.sorted.bam",
-        bam_index="{sample}/filtered_mapped/{sample}.{test}.sorted.bam.bai",
         full_bam="{sample}/mapped/{sample}.sorted.bam",
         full_bam_index="{sample}/mapped/{sample}.sorted.bam.bai",
         merged_reads="{sample}/filtered_mapped/{sample}.{test}.merged_reads.txt",
         candidate_insertion_script = srcdir("get_candidate_insertions.py"),
         memory_per_thread="12G"
     shell:
-        "{config[python_dir]} {params.candidate_insertion_script} --bam {params.bam} --merged {params.merged_reads} --min-insertion-length {config[min_insertion_length]} --min-mapq {config[min_mapq]} --min-detected-inclusion-length {config[min_detected_inclusion_length]} > {output}"
+        "{config[python_dir]} {params.candidate_insertion_script} --bam {input.bam} --merged {params.merged_reads} --min-insertion-length {config[min_insertion_length]} --min-mapq {config[min_mapq]} --min-detected-inclusion-length {config[min_detected_inclusion_length]} > {output}"
 
 
 rule run_convert_candidate_insertions_to_fasta:
@@ -557,6 +558,7 @@ rule merge_aligned_passing_inserts:
 #
 
 # Split bam by region
+
 rule split_bam:
     input:
         bam = "{sample}/mapped/{sample}.sorted.bam",
