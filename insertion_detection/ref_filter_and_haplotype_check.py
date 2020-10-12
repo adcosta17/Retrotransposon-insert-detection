@@ -171,7 +171,7 @@ def get_filters(file):
 
 
 def in_ref_sample(insert_dict, ref_sample, row_args, message):
-	ref_count = 0
+    ref_count = 0
     if args.ref_sample in insert_dict:
         ref_count = insert_dict[args.ref_sample]["0"] + insert_dict[args.ref_sample]["1"] + insert_dict[args.ref_sample]["2"]
     if ref_count > 0:
@@ -181,7 +181,7 @@ def in_ref_sample(insert_dict, ref_sample, row_args, message):
     return False
 
 def get_total_inserts(insert_dict, sample):
-	total_inserts = 0
+    total_inserts = 0
     for sample in insert_dict:
         if sample == args.sample:
             continue
@@ -288,7 +288,7 @@ with open(args.input) as csvfile:
         else:
             hp = row_args[19]
         if hp == "0":
-        	# No haplotype for this insert.
+            # No haplotype for this insert.
             all_sample_insert_count = 0
             all_sample_hap_count = 0
             for sample in insert_dict:
@@ -297,11 +297,12 @@ with open(args.input) as csvfile:
                 all_sample_insert_count += insert_dict[sample]["0"]
                 if sample in haplotype_dict:
                     all_sample_hap_count += haplotype_dict[sample]["0"]
-            if float(all_sample_insert_count)/all_sample_hap_count >= 0.8:
-                format_and_print_line_insert_dict(insert_dict, row_args, "No_haplotype_likely_polymorphic_multi_sample")
+            if all_sample_hap_count > 0:
+                if float(all_sample_insert_count)/all_sample_hap_count >= 0.8:
+                    format_and_print_line_insert_dict(insert_dict, row_args, "No_haplotype_likely_polymorphic_multi_sample")
+                    continue
+            if in_ref_sample(small_filter[chrom][key]["inserts"], args.ref_sample, row_args, "ref_control_sample_fail"):
                 continue
-            elif in_ref_sample(small_filter[chrom][key]["inserts"], args.ref_sample, row_args, "ref_control_sample_fail"):
-            	continue
             total_inserts = get_total_inserts(insert_dict, args.sample)
             if total_inserts == 0:
                 row_args.append("insert\thap_0_pass\tnovel")
@@ -356,19 +357,19 @@ with open(args.input) as csvfile:
             if sample in softclip_dict:
                 hp_insert_count += softclip_dict[sample][hp]
             if sample in haplotype_dict:    
-            	hp_total_count += haplotype_dict[sample][hp]
+                hp_total_count += haplotype_dict[sample][hp]
             if hp == "1":
                 other_hp_insert_count += insert_dict[sample]["2"]
                 if sample in softclip_dict:
                     other_hp_insert_count += softclip_dict[sample]["2"]
                 if sample in haplotype_dict:
-                	other_hp_total_count += haplotype_dict[sample]["2"]
+                    other_hp_total_count += haplotype_dict[sample]["2"]
             elif hp == "2":
                 other_hp_insert_count += insert_dict[sample]["1"]
                 if sample in softclip_dict:
                     other_hp_insert_count += softclip_dict[sample]["1"]
                 if sample in haplotype_dict:
-                	other_hp_total_count += haplotype_dict[sample]["1"]
+                    other_hp_total_count += haplotype_dict[sample]["1"]
         hp_insert_fraction = 0
         other_hp_insert_fraction = 0
         if hp_total_count > 0:
@@ -386,7 +387,7 @@ with open(args.input) as csvfile:
         # These should be real inserts
         # Last check to see if small distance failures in reference
         if in_ref_sample(small_filter[chrom][key]["inserts"], args.ref_sample, row_args, "ref_control_sample_fail"):
-        	continue
+            continue
         total_inserts = get_total_inserts(insert_dict, args.sample)
         if total_inserts == 0:
             row_args.append("insert\tpassed_hp_check\tnovel")

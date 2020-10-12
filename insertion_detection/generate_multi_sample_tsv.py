@@ -46,7 +46,7 @@ def get_soft_clip(cigartuples, reverse=False):
 
 parser = argparse.ArgumentParser( description='Remove insertions that are near insertions in a reference sample')
 parser.add_argument('--sample', required=True)
-parser.add_argument('--suffix', default=".all.read_insertions.repbase_annotated.high_confidence.chimeric_filtered.tsv")
+parser.add_argument('--suffix', default=".all.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.tsv")
 parser.add_argument('--folder', default="read_analysis")
 parser.add_argument('--bam-suffix', default=".sorted.phased.bam")
 parser.add_argument('--bam-folder', default="phased")
