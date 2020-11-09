@@ -119,7 +119,7 @@ parser.add_argument('--minimap2-paf', required=False)
 parser.add_argument('--last-tab', required=False)
 parser.add_argument('--min-mapped-fraction', type=float, default=0.9)
 parser.add_argument('--min-mapped-length', type=int, default=100)
-parser.add_argument('--min-escore', type=float, default=1e-15)
+parser.add_argument('--min-escore', type=float, default=1e-14)
 args = parser.parse_args()
 
 read_to_best_annotation = defaultdict(RepbaseMapping)

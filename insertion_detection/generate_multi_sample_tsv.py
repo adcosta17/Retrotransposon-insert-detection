@@ -43,6 +43,19 @@ def get_soft_clip(cigartuples, reverse=False):
             break
     return count
 
+def same_family(annotation1, annotation2):
+    if "ambiguous" in annotation1 or "ambiguous" in annotation2:
+        return True
+    if "LINE" in annotation1 and "LINE" in annotation2:
+        return True
+    if "SVA" in annotation1 and ("SVA" in annotation2 or "SINE" in annotation2):
+        return True
+    if "SINE" in annotation1 and ("SVA" in annotation2 or "SINE" in annotation2):
+        return True
+    if "ERV" in annotation1 and "ERV" in annotation2:
+        return True
+    return False
+
 
 parser = argparse.ArgumentParser( description='Remove insertions that are near insertions in a reference sample')
 parser.add_argument('--sample', required=True)
@@ -101,7 +114,8 @@ for sample in args.sample.split(','):
             if len(nearby) > 0:
                 # have an insert already, update the data
                 for item in nearby:
-                    data_dict[item.data[1]] += 1
+                    if same_family(annotation, item.data[0]):
+                        data_dict[item.data[1]] += 1
             chrom = row_args[0]
             start = int(row_args[1]) - args.max_distance
             end = int(row_args[2]) + args.max_distance

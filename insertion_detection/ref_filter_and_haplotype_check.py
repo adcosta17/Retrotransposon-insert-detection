@@ -180,6 +180,19 @@ def in_ref_sample(insert_dict, ref_sample, row_args, message):
         return True
     return False
 
+def in_ref_sample_small(insert_dict, ref_sample, row_args, message):
+    ref_count = 0
+    if args.ref_sample in insert_dict:
+        ref_count = insert_dict[args.ref_sample]["0"] + insert_dict[args.ref_sample]["1"] + insert_dict[args.ref_sample]["2"]
+        if "fail" in insert_dict[args.ref_sample]:
+            ref_count += insert_dict[args.ref_sample]["fail"]
+    if ref_count > 0:
+        # have an insert in ref_control sample, filter is out
+        format_and_print_line_insert_dict(insert_dict, row_args, message)
+        return True
+    return False
+
+
 def get_total_inserts(insert_dict, sample):
     total_inserts = 0
     for sample in insert_dict:
@@ -301,7 +314,7 @@ with open(args.input) as csvfile:
                 if float(all_sample_insert_count)/all_sample_hap_count >= 0.8:
                     format_and_print_line_insert_dict(insert_dict, row_args, "No_haplotype_likely_polymorphic_multi_sample")
                     continue
-            if in_ref_sample(small_filter[chrom][key]["inserts"], args.ref_sample, row_args, "ref_control_sample_fail"):
+            if in_ref_sample_small(small_filter[chrom][key]["inserts"], args.ref_sample, row_args, "ref_control_sample_fail"):
                 continue
             total_inserts = get_total_inserts(insert_dict, args.sample)
             if total_inserts == 0:
@@ -386,7 +399,7 @@ with open(args.input) as csvfile:
             continue
         # These should be real inserts
         # Last check to see if small distance failures in reference
-        if in_ref_sample(small_filter[chrom][key]["inserts"], args.ref_sample, row_args, "ref_control_sample_fail"):
+        if in_ref_sample_small(small_filter[chrom][key]["inserts"], args.ref_sample, row_args, "ref_control_sample_fail"):
             continue
         total_inserts = get_total_inserts(insert_dict, args.sample)
         if total_inserts == 0:

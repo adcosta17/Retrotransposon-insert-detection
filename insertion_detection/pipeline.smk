@@ -139,6 +139,26 @@ rule all_insert_mapped_bams:
     input:
         "combined/combined_inserts_mapped.sorted.bam"
 
+rule all_sniffles:
+    input:
+        expand("{s}/structural_variants/{s}.sniffles.bedpe", s=config["samples"])
+
+# Sniffles
+
+rule sniffles:
+    input:
+        bam = "{sample}/mapped/{sample}.sorted.bam",
+        bai = "{sample}/mapped/{sample}.sorted.bam.bai"
+    output:
+        protected("{sample}/structural_variants/{sample}.sniffles.bedpe")
+    params:
+        memory_per_thread="10G",
+        run_time="1:0:0:0",
+        min_reads = "3"
+    threads: 10
+    shell:
+        "{config[sniffles_dir]} -s {params.min_reads} --max_num_splits 1 -t {threads} -m {input.bam} -b {output}"
+
 #
 # Mapping rules
 #
@@ -235,7 +255,6 @@ rule run_convert_candidate_insertions_to_fasta:
         memory_per_thread="8G"
     shell:
         "{config[python_dir]} {params.candidate_insertion_conversion_script} --input {input} > {output}"
-
 
 rule run_candidate_insertion_annotation:
     input:
@@ -500,6 +519,7 @@ rule make_lastdb:
     shell:
         "lastdb {config[repbase]}.lastdb {input}"
 
+
 rule map_insertion_sequences_last:
     input:
         fa="{base}.fa",
@@ -594,12 +614,12 @@ rule phase_bam:
     output:
         temp("combined/combined_{regions}.vcf")
     params:
-        memory_per_thread="30G",
+        memory_per_thread="48G",
         ref_to_use= get_reference_default,
         wrapper = srcdir("bash_wrapper.sh")
     threads: 2
     shell:
-        "{params.wrapper} 'longshot -c 3 -C 5000 -r {wildcards.regions} --bam {input.bam} --ref {params.ref_to_use} --out {output}'"
+        "{params.wrapper} 'longshot -c 3 -C 10000 -r {wildcards.regions} --bam {input.bam} --ref {params.ref_to_use} --out {output}'"
 
 # Zip and index the phased bams
 rule phase_bam_index:
