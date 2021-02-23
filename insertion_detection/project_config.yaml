@@ -36,6 +36,25 @@ samtools_dir:
 base_ref:
     /path/to/GRCh38.fna
 
+minimap2_preset:
+    map-ont
+
+lra_preset:
+    ONT
+
+meryl_dir:
+   /path/to/meryl
+
+winnow_dir:
+   /path/to/winnowmap
+
+sniffles_dir:
+    /path/to/sniffles
+
+racon_dir:
+    /path/to/racon
+
+
 # Reference for test. Same as base ref normally
 reference_all:
     /path/to/GRCh38.fna 
@@ -50,23 +69,22 @@ min_mapq_fraction:
     1.0
 
 xlarge_window:
-  500
+  1000
 
 large_window:
-  200
+  500
 
 medium_window:
-  50
+  200
 
 small_window:
-  20
+  50
 
 telomere_filter:
     hg38_telomeres.tsv
 
 centromere_filter:
     hg38_centromeres.tsv
-
 
 reference_tsv_to_filter:
     /path/to/control/sample/tsv
