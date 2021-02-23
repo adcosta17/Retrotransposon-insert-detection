@@ -1,0 +1,16 @@
+name: rt_insertion_detection
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - snakemake
+  - pysam
+  - bedtools
+  - samtools
+  - parasail-python
+  - minimap2
+  - pybedtools
+  - longshot
+  - whatshap
+  - lra 
