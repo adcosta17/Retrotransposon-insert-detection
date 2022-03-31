@@ -17,7 +17,7 @@ def is_fail(pf_annotation):
         return False
     pf_annotation_split = pf_annotation.split(",")
     count = 0
-    filters = ["in_centromere", "mapq_fraction"]
+    filters = ["in_centromere", "mapq_fraction", "possible_chimera"]
     for item in pf_annotation_split:
         if item in filters:
             count += 1
@@ -64,6 +64,7 @@ parser.add_argument('--bam-suffix', default=".sorted.phased.bam")
 parser.add_argument('--bam-folder', default="phased")
 parser.add_argument('--merged-suffix', default=".all.merged_reads.txt")
 parser.add_argument('--merged-folder', default="filtered_mapped")
+parser.add_argument('--reads-to-exclude', default="")
 parser.add_argument('--max-distance', type=int, default=500)
 parser.add_argument('--filters-to-exclude', default="NA")
 parser.add_argument('--threads', type=int, default=1)
@@ -73,10 +74,17 @@ threads_to_use = 1
 if args.threads > 1:
     threads_to_use = args.threads
 
+reads_to_exclude = {}
+if args.reads_to_exclude != "" and args.reads_to_exclude != "None":
+    with open(args.reads_to_exclude, 'r') as in_reads:
+        for line in in_reads:
+            read = line.strip()
+            reads_to_exclude[read] = 1
+
 # Split string into list:
 base_tree = {}
 
-def get_base_tree(sample, folder, suffix):
+def get_base_tree(sample, folder, suffix, reads_to_exclude):
     sample_tsv = "./"+sample+"/"+folder+"/"+sample+suffix
     ret_tree = {}
     print(sample_tsv,file=sys.stderr)
@@ -88,6 +96,8 @@ def get_base_tree(sample, folder, suffix):
                 count = 1
                 continue
             # get insertion coordinates, insert into intervaltree allowing for the maximum allowable distance
+            if row_args[3] in reads_to_exclude:
+                continue
             if is_fail(row_args[8]):
                 continue
             chrom = row_args[0]
@@ -105,14 +115,14 @@ thread_list = []
 if threads_to_use > 1:
     for sample in args.sample.split(','):
         print(sample,file=sys.stderr)
-        t = threading.Thread(target=wrapper, args=(get_base_tree, (sample, args.folder, args.suffix,), results))
+        t = threading.Thread(target=wrapper, args=(get_base_tree, (sample, args.folder, args.suffix,reads_to_exclude,), results))
         t.start()
         thread_list.append(t)
     for t in thread_list:
         t.join()
 else:
     for sample in args.sample.split(','):
-        results.append(get_base_tree(sample, args.folder, args.suffix))
+        results.append(get_base_tree(sample, args.folder, args.suffix,reads_to_exclude))
 
 chroms = {}
 for res in results:
@@ -139,7 +149,7 @@ print("Completed Pass 1",file=sys.stderr)
 intervaltrees = {}
 insert_sizes = defaultdict(IntervalTree)
 
-def get_intervals_1(sample, folder, suffix, max_distance, base_tree):
+def get_intervals_1(sample, folder, suffix, max_distance, base_tree, reads_to_exclude):
     sample_tsv = "./"+sample+"/"+folder+"/"+sample+suffix
     interval_ret = {}
     print(sample_tsv,file=sys.stderr)
@@ -152,6 +162,8 @@ def get_intervals_1(sample, folder, suffix, max_distance, base_tree):
                 count = 1
                 continue
             if is_fail(row_args[8]):
+                continue
+            if row_args[3] in reads_to_exclude:
                 continue
             chrom = row_args[0]
             start = int(row_args[1]) - max_distance
@@ -189,14 +201,14 @@ thread_list = []
 if threads_to_use > 1:
     for sample in args.sample.split(','):
         print(sample,file=sys.stderr)
-        t = threading.Thread(target=wrapper, args=(get_intervals_1, (sample, args.folder, args.suffix, args.max_distance, base_tree,), results))
+        t = threading.Thread(target=wrapper, args=(get_intervals_1, (sample, args.folder, args.suffix, args.max_distance, base_tree,reads_to_exclude,), results))
         t.start()
         thread_list.append(t)
     for t in thread_list:
         t.join()
 else:
     for sample in args.sample.split(','):
-        results.append(get_intervals_1(sample, args.folder, args.suffix, args.max_distance, base_tree))
+        results.append(get_intervals_1(sample, args.folder, args.suffix, args.max_distance, base_tree,reads_to_exclude))
 
 for res in results:
     for chrom in chroms:
@@ -214,7 +226,7 @@ for res in results:
 
 print("Completed Pass 2",file=sys.stderr)
 
-def get_intervals_2(sample, folder, suffix, intervaltrees, max_distance):
+def get_intervals_2(sample, folder, suffix, intervaltrees, max_distance, reads_to_exclude):
     sample_tsv = "./"+sample+"/"+folder+"/"+sample+suffix
     local_tree = {}
     print(sample_tsv,file=sys.stderr)
@@ -235,6 +247,8 @@ def get_intervals_2(sample, folder, suffix, intervaltrees, max_distance):
             #    print(sample + " " + str(count), file=sys.stderr)
             #count += 1
             # get insertion coordinates, insert into intervaltree allowing for the maximum allowable distance
+            if row_args[3] in reads_to_exclude:
+                continue
             if is_fail(row_args[8]):
                 chrom = row_args[0]
                 start = int(row_args[1]) - max_distance
@@ -258,14 +272,14 @@ results = []
 thread_list = []
 if threads_to_use > 1:
     for sample in args.sample.split(','):
-        t = threading.Thread(target=wrapper, args=(get_intervals_2, (sample, args.folder, args.suffix, intervaltrees, args.max_distance,), results))
+        t = threading.Thread(target=wrapper, args=(get_intervals_2, (sample, args.folder, args.suffix, intervaltrees, args.max_distance,reads_to_exclude,), results))
         t.start()
         thread_list.append(t)
     for t in thread_list:
         t.join()
 else:
     for sample in args.sample.split(','):
-        results.append(get_intervals_2(sample, args.folder, args.suffix, intervaltrees, args.max_distance))
+        results.append(get_intervals_2(sample, args.folder, args.suffix, intervaltrees, args.max_distance,reads_to_exclude))
 
 for res in results:
     for chrom in chroms:
@@ -317,7 +331,7 @@ for chrom in intervaltrees:
 
 print("Haplotypes Setup",file=sys.stderr)
 
-def get_softclip_haplotype(sample, bam_folder, bam_suffix, max_distance, intervaltrees, haplotypes, softclips, insert_sizes, regions, merged_reads):
+def get_softclip_haplotype(sample, bam_folder, bam_suffix, max_distance, intervaltrees, haplotypes, softclips, insert_sizes, regions, merged_reads, reads_to_exclude):
     local_hap = copy.deepcopy(haplotypes)
     local_soft = copy.deepcopy(softclips)
     local_merged = copy.deepcopy(merged_reads)
@@ -333,7 +347,7 @@ def get_softclip_haplotype(sample, bam_folder, bam_suffix, max_distance, interva
             r_start = int(region.split('_')[0])
             r_end = int(region.split('_')[1])
             for record in sam_reader.fetch(sq['SN'], r_start, r_end):
-                if record.is_unmapped:
+                if record.is_unmapped or record.query_name in reads_to_exclude:
                     continue
                 tags = record.get_tags()
                 hap = "HP:0"
@@ -383,14 +397,14 @@ thread_list = []
 if threads_to_use > 1:
     for sample in args.sample.split(','):
         print(sample,file=sys.stderr)
-        t = threading.Thread(target=wrapper, args=(get_softclip_haplotype, (sample, args.bam_folder, args.bam_suffix, args.max_distance, intervaltrees, haplotypes, softclips, insert_sizes,regions,merged_reads[sample],), results))
+        t = threading.Thread(target=wrapper, args=(get_softclip_haplotype, (sample, args.bam_folder, args.bam_suffix, args.max_distance, intervaltrees, haplotypes, softclips, insert_sizes,regions,merged_reads[sample],reads_to_exclude,), results))
         t.start()
         thread_list.append(t)
     for t in thread_list:
         t.join()
 else:
     for sample in args.sample.split(','):
-        results.append(get_softclip_haplotype(sample, args.bam_folder, args.bam_suffix, args.max_distance, intervaltrees, haplotypes, softclips, insert_sizes,regions,merged_reads[sample]))
+        results.append(get_softclip_haplotype(sample, args.bam_folder, args.bam_suffix, args.max_distance, intervaltrees, haplotypes, softclips, insert_sizes,regions,merged_reads[sample],reads_to_exclude))
 
 for res in results:
     softclips_ret = res[0]

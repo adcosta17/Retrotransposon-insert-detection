@@ -65,7 +65,7 @@ with open(args.tsv) as in_tsv:
 # Read through the Full bam. Look for reads in the reads to use set
 read_locations = {}
 read_haplotypes = {}
-sam_reader = pysam.AlignmentFile(args.full_bam)
+sam_reader = pysam.AlignmentFile(args.full_bam, check_sq=False)
 for record in sam_reader.fetch():
     if record.is_unmapped:
         continue
@@ -85,7 +85,7 @@ for record in sam_reader.fetch():
 
 # Once we have the locations of where each read we care about aligns in the full bam, parse the insert bam
 insert_locations = {}
-sam_reader = pysam.AlignmentFile(args.insert_bam)
+sam_reader = pysam.AlignmentFile(args.insert_bam, check_sq=False)
 for record in sam_reader.fetch():
     if record.is_unmapped or record.mapping_quality < args.min_mapq:
         # Insert has not mapped well, Don't consider it
@@ -132,9 +132,13 @@ with open(args.tsv) as in_tsv:
         chimeric_fail = False
         if line_args[3] in insert_locations and line_args[3] in read_locations:
             # have an insert for this read that mapped well enough
-            if line_args[4]+"-"+line_args[5] in insert_locations[line_args[3]]:
+            if line_args[4]+"-"+line_args[5] in insert_locations[line_args[3]] and len(read_locations[line_args[3]]) > 1:
                 # Have a mapping for this insert, compare it to all of the reads mappings. If any intersect Flag this insert as a failure
                 for record in read_locations[line_args[3]]:
+                    if (record.reference_name == insert_locations[line_args[3]][line_args[4]+"-"+line_args[5]].reference_name and
+                        record.reference_start == insert_locations[line_args[3]][line_args[4]+"-"+line_args[5]].reference_start and
+                        record.reference_end == insert_locations[line_args[3]][line_args[4]+"-"+line_args[5]].reference_end):
+                        continue
                     if (record.reference_name == insert_locations[line_args[3]][line_args[4]+"-"+line_args[5]].reference_name and
                         record.reference_start < insert_locations[line_args[3]][line_args[4]+"-"+line_args[5]].reference_start and
                         record.reference_end > insert_locations[line_args[3]][line_args[4]+"-"+line_args[5]].reference_end):

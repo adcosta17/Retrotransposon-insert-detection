@@ -364,6 +364,10 @@ with open(args.input) as csvfile:
             count = 1
             print(row.strip()+"\tsource\tsample_count\ttype")
             continue
+        to_print = False
+        if row_args[3] == "b8ce41be-5e49-4739-937c-4e67c17846c9" or row_args[3] == "6d04ec05-6b3d-4c51-ba3b-60ef22c4a859" or row_args[3] == "d717c2ef-06b8-4d6e-9b0a-a928d0c1ef77" or row_args[3] == "f7b9ad3d-f06d-4a9f-9d50-5205ae8186cf":
+            to_print = True
+            print(row_args[3], file=sys.stderr)
         chrom = row_args[0]
         key = row_args[1]+"-"+row_args[2]
         # Check to see if there are any inserts nearby
@@ -467,7 +471,7 @@ with open(args.input) as csvfile:
                     other_hp_total_count += haplotype_dict[sample]["0"]
         hp_insert_fraction = 0
         other_hp_insert_fraction = 0
-        if hp_total_count > 0:
+        if hp_total_count > 0 and hp_insert_count > 1:
             hp_insert_fraction = float(hp_insert_count)/hp_total_count
         if other_hp_total_count > 0:
             other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count
@@ -513,7 +517,7 @@ with open(args.input) as csvfile:
                     other_hp_total_count += haplotype_dict[sample]["0"]
         hp_insert_fraction = 0
         other_hp_insert_fraction = 0
-        if hp_total_count > 0:
+        if hp_total_count > 0 and hp_insert_count > 1:
             hp_insert_fraction = float(hp_insert_count)/hp_total_count
         if other_hp_total_count > 0:
             other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count
@@ -554,7 +558,7 @@ with open(args.input) as csvfile:
                     other_hp_total_count += haplotype_dict[sample]["0"]
         hp_insert_fraction = 0
         other_hp_insert_fraction = 0
-        if hp_total_count > 0:
+        if hp_total_count > 0 and hp_insert_count > 1:
             hp_insert_fraction = float(hp_insert_count)/hp_total_count
         if other_hp_total_count > 0:
             other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count
@@ -600,7 +604,7 @@ with open(args.input) as csvfile:
                     other_hp_total_count += haplotype_dict[sample]["0"]
         hp_insert_fraction = 0
         other_hp_insert_fraction = 0
-        if hp_total_count > 0:
+        if hp_total_count > 0 and hp_insert_count > 1:
             hp_insert_fraction = float(hp_insert_count)/hp_total_count
         if other_hp_total_count > 0:
             other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count
@@ -631,11 +635,18 @@ with open(args.input) as csvfile:
         for sample in insert_dict:
             if sample == args.ref_sample:
                 continue
+            if to_print:
+                print("Sample: "+sample, file=sys.stderr)
+                print(insert_dict[sample][hp], file=sys.stderr)
+                print(insert_dict[sample]["0"], file=sys.stderr)
             hp_insert_count += insert_dict[sample][hp]
             hp_insert_count += insert_dict[sample]["0"]
             if sample in haplotype_dict:
                 hp_total_count += haplotype_dict[sample][hp]
                 hp_total_count += haplotype_dict[sample]["0"]
+                if to_print:
+                    print(haplotype_dict[sample][hp], file=sys.stderr)
+                    print(haplotype_dict[sample]["0"], file=sys.stderr)
             if hp == "1":
                 other_hp_insert_count += insert_dict[sample]["2"]
                 if sample in haplotype_dict:
@@ -648,10 +659,16 @@ with open(args.input) as csvfile:
                     other_hp_total_count += haplotype_dict[sample]["0"]
         hp_insert_fraction = 0
         other_hp_insert_fraction = 0
-        if hp_total_count > 0:
+        if hp_total_count > 0 and hp_insert_count > 1:
             hp_insert_fraction = float(hp_insert_count)/hp_total_count
         if other_hp_total_count > 0:
             other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count
+        if to_print:
+            print("After", file=sys.stderr)
+            print(hp_total_count, file=sys.stderr)
+            print(hp_insert_count, file=sys.stderr)
+            print(hp_insert_fraction, file=sys.stderr)
+            print(other_hp_insert_fraction, file=sys.stderr)
         if hp_insert_fraction >= 0.3 and other_hp_insert_fraction >= 0.3:
             # Likely polymorphic when looking at all non reference control samples, both hp
             format_and_print_line_insert_dict(insert_dict, row_args, annotation+"_"+"liklely_polymorphic_both_hp_multi_sample_100")
@@ -698,7 +715,7 @@ with open(args.input) as csvfile:
                     other_hp_total_count += haplotype_dict[sample]["0"]
         hp_insert_fraction = 0
         other_hp_insert_fraction = 0
-        if hp_total_count > 0:
+        if hp_total_count > 0 and hp_insert_count > 1:
             hp_insert_fraction = float(hp_insert_count)/hp_total_count
         if other_hp_total_count > 0:
             other_hp_insert_fraction = float(other_hp_insert_count)/other_hp_total_count

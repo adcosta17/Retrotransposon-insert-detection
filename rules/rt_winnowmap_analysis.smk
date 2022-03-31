@@ -37,7 +37,7 @@ rule run_candidate_insertion_annotation_winnow:
         tsv="{sample}/winnow_read_analysis/{sample}.{test}.read_insertions.tsv",
         tab="{sample}/winnow_read_analysis/{sample}.{test}.read_insertions.mapped_to_repbase.last.tab"
     output:
-        temp("{sample}/winnow_read_analysis/{sample}.{test}.read_insertions.repbase_annotated.tsv")
+        "{sample}/winnow_read_analysis/{sample}.{test}.read_insertions.repbase_annotated.tsv"
     threads: 1
     params:
         candidate_insertion_annotation_script = srcdir("../scripts/annotate_insertions_from_repbase.py"),
@@ -129,7 +129,7 @@ rule get_multi_sample_filter_xl_winnow:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[xlarge_window]} > {output.x_large}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[xlarge_window]} --reads-to-exclude {config[exclude]} > {output.x_large}
         """
 
 rule get_multi_sample_filter_large_winnow:
@@ -145,7 +145,7 @@ rule get_multi_sample_filter_large_winnow:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[large_window]} > {output.large}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[large_window]} --reads-to-exclude {config[exclude]} > {output.large}
         """
 
 rule get_multi_sample_filter_medium_winnow:
@@ -161,7 +161,7 @@ rule get_multi_sample_filter_medium_winnow:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[medium_window]} > {output.medium}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[medium_window]} --reads-to-exclude {config[exclude]} > {output.medium}
         """
 
 rule get_multi_sample_filter_small_winnow:
@@ -177,7 +177,7 @@ rule get_multi_sample_filter_small_winnow:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[small_window]} > {output.small}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder winnow_read_analysis --bam-folder winnow_phased --merged-folder winnow_filtered_mapped --max-distance {config[small_window]} --reads-to-exclude {config[exclude]} > {output.small}
         """
 
 rule reference_filter_and_haplotype_analysis_winnow:
@@ -213,7 +213,7 @@ rule filter_inserts_within_other_inserts_winnow:
         region_list = srcdir("../utils/split_regions.bed"),
         memory_per_thread="10G"
     shell:
-        "python {params.script} --sample {config[samples_csv]} --folder winnow_read_analysis --bam-folder winnow_phased --insert-location-output {output.inserts} --low-mapq-output {output.low_mapq} --regions-list {params.region_list} --threads {threads}"
+        "python {params.script} --sample {config[samples_csv]} --folder winnow_read_analysis --merged-folder winnow_filtered_mapped --bam-folder winnow_mapped --bam-suffix .sorted.bam --insert-location-output {output.inserts} --low-mapq-output {output.low_mapq} --regions-list {params.region_list} --threads {threads}"
 
 
 rule normalize_counts_winnow:
@@ -223,10 +223,10 @@ rule normalize_counts_winnow:
         all="{sample}/winnow_read_analysis/{sample}.{test}.normalized_ava_counts.txt",
         mapped="{sample}/winnow_read_analysis/{sample}.{test}.normalized_ava_mapped_counts.txt",
         distributions="{sample}/winnow_read_analysis/{sample}.{test}.read_len_distributions.txt"
-    threads: 2
+    threads: 1
     params:
         normalize_script = srcdir("../scripts/normalize_ava_calls.py"),
-        memory_per_thread="8G",
+        memory_per_thread="16G",
         bam="{sample}/winnow_mapped/{sample}.sorted.bam",
         bam_index="{sample}/winnow_mapped/{sample}.sorted.bam.bai",
         fastq_folder=get_sample_fastq_folder,
@@ -241,12 +241,12 @@ rule run_candidate_insertion_updated_annotation_winnow:
         tab="{sample}/winnow_read_analysis/{sample}.{test}.read_insertions.mapped_to_repbase.last.tab"
     output:
         "{sample}/winnow_read_analysis/{sample}.{test}.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv"
-    threads: 1
+    threads: 5
     params:
         candidate_insertion_annotation_script = srcdir("../scripts/update_ambiguous.py"),
-        memory_per_thread="24G"
+        memory_per_thread="10G"
     shell:
-        "python {params.candidate_insertion_annotation_script} --input {input.tsv} --last {input.tab} --min-mapped-fraction {config[insert_mapping_fraction]} > {output}"
+        "python {params.candidate_insertion_annotation_script} --input {input.tsv} --last-tab {input.tab} --min-mapped-fraction {config[insert_mapping_fraction]} --sub-family-fasta {config[l1_filter]} > {output}"
 
 rule normalize_counts_ava_updated_annotation_winnow:
     input:
@@ -255,15 +255,43 @@ rule normalize_counts_ava_updated_annotation_winnow:
         all="{sample}/winnow_read_analysis/{sample}.{test}.normalized_ava_counts.updated_annoation.txt",
         mapped="{sample}/winnow_read_analysis/{sample}.{test}.normalized_ava_mapped_counts.updated_annoation.txt",
         distributions="{sample}/winnow_read_analysis/{sample}.{test}.read_len_distributions.updated_annoation.txt"
-    threads: 2
+    threads: 1
     params:
         normalize_script = srcdir("../scripts/normalize_ava_calls.py"),
-        memory_per_thread="8G",
+        memory_per_thread="16G",
         bam="{sample}/winnow_mapped/{sample}.sorted.bam",
         bam_index="{sample}/winnow_mapped/{sample}.sorted.bam.bai",
         fastq_folder=get_sample_fastq_folder,
         sample_name=get_sample_name
     shell:
-        "python {params.normalize_script} --input {input.tsv} --bam {params.bam} --sample {params.sample_name} --fastq-folder {params.fastq_folder} --output-all {output.all} --output-mapped {output.mapped} --output-distributions {output.distributions}"
+        "python {params.normalize_script} --input {input.tsv} --bam {params.bam} --sample {params.sample_name} --fastq-folder {params.fastq_folder} --output-all {output.all} --output-mapped {output.mapped} --output-distributions {output.distributions} --subfamily"
 
 
+rule filter_tsvs:
+    input:
+        old="{sample}/winnow_read_analysis/{sample}.all.read_insertions.repbase_annotated.tsv",
+        tsv="{sample}/winnow_read_analysis/{sample}.all.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv"
+    output:
+        "{sample}/winnow_read_analysis/{sample}.filter_tsvs.tsv"
+    threads: 1
+    params:
+        script= srcdir("../scripts/filter_tsvs.py"),
+        memory_per_thread="8G",
+        ref_file="Sample1/winnow_read_analysis/Sample1.all.read_insertions.tsv"
+    shell:
+        "python {params.script} --input {input.old} --reference-sample {params.ref_file} > {output}"
+
+
+
+rule find_differences:
+    input:
+        filtered_tsv="{sample}/winnow_read_analysis/{sample}.filter_tsvs.tsv",
+        old_tsv="{sample}/winnow_read_analysis/{sample}.all.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv"
+    output:
+        "{sample}/winnow_read_analysis/{sample}.differences.tsv"
+    threads: 1
+    params:
+        memory_per_thread="8G",
+        script= srcdir("../scripts/find_differences.py")
+    shell:
+        "python {params.script} --without-filters {input.filtered_tsv} --with-filters {input.old_tsv} > {output}"

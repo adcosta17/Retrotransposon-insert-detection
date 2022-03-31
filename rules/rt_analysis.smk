@@ -37,7 +37,7 @@ rule run_candidate_insertion_annotation:
         tsv="{sample}/read_analysis/{sample}.{test}.read_insertions.tsv",
         tab="{sample}/read_analysis/{sample}.{test}.read_insertions.mapped_to_repbase.last.tab"
     output:
-        temp("{sample}/read_analysis/{sample}.{test}.read_insertions.repbase_annotated.tsv")
+        "{sample}/read_analysis/{sample}.{test}.read_insertions.repbase_annotated.tsv"
     threads: 1
     params:
         candidate_insertion_annotation_script = srcdir("../scripts/annotate_insertions_from_repbase.py"),
@@ -129,7 +129,7 @@ rule get_multi_sample_filter_xl:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --max-distance {config[xlarge_window]} > {output.x_large}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder read_analysis --bam-folder phased --merged-folder filtered_mapped --max-distance {config[xlarge_window]} --reads-to-exclude {config[exclude]} > {output.x_large}
         """
 
 rule get_multi_sample_filter_large:
@@ -145,7 +145,7 @@ rule get_multi_sample_filter_large:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --max-distance {config[large_window]} > {output.large}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder read_analysis --bam-folder phased --merged-folder filtered_mapped --max-distance {config[large_window]} --reads-to-exclude {config[exclude]} > {output.large}
         """
 
 rule get_multi_sample_filter_medium:
@@ -161,7 +161,7 @@ rule get_multi_sample_filter_medium:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --max-distance {config[medium_window]} > {output.medium}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder read_analysis --bam-folder phased --merged-folder filtered_mapped --max-distance {config[medium_window]} --reads-to-exclude {config[exclude]} > {output.medium}
         """
 
 rule get_multi_sample_filter_small:
@@ -177,7 +177,7 @@ rule get_multi_sample_filter_small:
         memory_per_thread="6G"
     shell:
         """
-        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --max-distance {config[small_window]} > {output.small}
+        python {params.gen_script} --sample {config[samples_csv]} --threads {threads} --folder read_analysis --bam-folder phased --merged-folder filtered_mapped --max-distance {config[small_window]} --reads-to-exclude {config[exclude]} > {output.small}
         """
 
 rule reference_filter_and_haplotype_analysis:
@@ -213,7 +213,7 @@ rule filter_inserts_within_other_inserts:
         region_list = srcdir("../utils/split_regions.bed"),
         memory_per_thread="10G"
     shell:
-        "python {params.script} --sample {config[samples_csv]} --insert-location-output {output.inserts} --low-mapq-output {output.low_mapq} --regions-list {params.region_list} --threads {threads}"
+        "python {params.script} --sample {config[samples_csv]} --folder read_analysis --merged-folder filtered_mapped --bam-folder mapped --bam-suffix .sorted.bam --insert-location-output {output.inserts} --low-mapq-output {output.low_mapq} --regions-list {params.region_list} --threads {threads}"
 
 
 rule normalize_counts:
@@ -241,12 +241,12 @@ rule run_candidate_insertion_updated_annotation:
         tab="{sample}/read_analysis/{sample}.{test}.read_insertions.mapped_to_repbase.last.tab"
     output:
         "{sample}/read_analysis/{sample}.{test}.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv"
-    threads: 1
+    threads: 5
     params:
         candidate_insertion_annotation_script = srcdir("../scripts/update_ambiguous.py"),
-        memory_per_thread="24G"
+        memory_per_thread="10G"
     shell:
-        "python {params.candidate_insertion_annotation_script} --input {input.tsv} --last {input.tab} --min-mapped-fraction {config[insert_mapping_fraction]} > {output}"
+        "python {params.candidate_insertion_annotation_script} --input {input.tsv} --last {input.tab} --min-mapped-fraction {config[insert_mapping_fraction]} --sub-family-fasta {config[l1_filter]} > {output}"
 
 rule normalize_counts_ava_updated_annotation:
     input:
@@ -264,6 +264,6 @@ rule normalize_counts_ava_updated_annotation:
         fastq_folder=get_sample_fastq_folder,
         sample_name=get_sample_name
     shell:
-        "python {params.normalize_script} --input {input.tsv} --bam {params.bam} --sample {params.sample_name} --fastq-folder {params.fastq_folder} --output-all {output.all} --output-mapped {output.mapped} --output-distributions {output.distributions}"
+        "python {params.normalize_script} --input {input.tsv} --bam {params.bam} --sample {params.sample_name} --fastq-folder {params.fastq_folder} --output-all {output.all} --output-mapped {output.mapped} --output-distributions {output.distributions} --subfamily"
 
 

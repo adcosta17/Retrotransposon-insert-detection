@@ -40,7 +40,7 @@ def get_old_tsv(wildcards):
     return "Oct12_tsvs/"+wildcards.sample+".read_insertions.repbase_annotated.reference_filtered.tsv"
 
 def get_regions():
-    f = open("/.mounts/labs/simpsonlab/users/adcosta/code/Retrotransposon-insert-detection/insertion_detection/split_regions.bed")
+    f = open(config['regions'])
     regions = list()
     for line in f:
         regions.append(line.rstrip())

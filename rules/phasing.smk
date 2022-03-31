@@ -40,7 +40,7 @@ rule phase_bam:
     params:
         memory_per_thread="48G",
         ref_to_use= get_reference_default
-    threads: 2
+    threads: 1
     shell:
         "longshot -c 3 -C 10000 -r {wildcards.regions} --bam {input.bam} --ref {params.ref_to_use} --out {output}"
 
@@ -53,7 +53,7 @@ rule phase_bam_index:
         index = temp("combined/combined_{regions}.vcf.gz.tbi")
     params:
         memory_per_thread="6G"
-    threads: 2
+    threads: 1
     shell:
         """
         bgzip -c {input} > {output.zip}
@@ -70,7 +70,7 @@ rule merge_vcf:
         index = protected("combined/combined.vcf.gz.tbi")
     params:
         memory_per_thread="4G"
-    threads: 2
+    threads: 1
     shell:
         """
         bcftools concat -a -O v {input.zip} | bcftools sort -O z -o {output.zip}
@@ -89,7 +89,7 @@ rule haplotag_bam:
     params:
         memory_per_thread="16G",
         ref_to_use= get_reference_default
-    threads: 2
+    threads: 1
     shell:
         "whatshap haplotag --ignore-read-groups --reference {params.ref_to_use} {input.vcf} {input.bam} | samtools sort -o {output.bam}"
 
@@ -130,7 +130,7 @@ rule phase_bam_winnow:
     params:
         memory_per_thread="48G",
         ref_to_use= get_reference_default
-    threads: 2
+    threads: 1
     shell:
         "longshot -c 3 -C 10000 -r {wildcards.regions} --bam {input.bam} --ref {params.ref_to_use} --out {output}"
 
@@ -143,7 +143,7 @@ rule phase_bam_index_winnow:
         index = temp("combined_winnow/combined_{regions}.vcf.gz.tbi")
     params:
         memory_per_thread="6G"
-    threads: 2
+    threads: 1
     shell:
         """
         bgzip -c {input} > {output.zip}
@@ -160,7 +160,7 @@ rule merge_vcf_winnow:
         index = protected("combined_winnow/combined.vcf.gz.tbi")
     params:
         memory_per_thread="4G"
-    threads: 2
+    threads: 1
     shell:
         """
         bcftools concat -a -O v {input.zip} | bcftools sort -O z -o {output.zip}
@@ -179,7 +179,7 @@ rule haplotag_bam_winnow:
     params:
         memory_per_thread="16G",
         ref_to_use= get_reference_default
-    threads: 2
+    threads: 1
     shell:
         "whatshap haplotag --ignore-read-groups --reference {params.ref_to_use} {input.vcf} {input.bam} | samtools sort -o {output.bam}"
 
@@ -220,7 +220,7 @@ rule phase_bam_lra:
     params:
         memory_per_thread="48G",
         ref_to_use= get_reference_default
-    threads: 2
+    threads: 1
     shell:
         "longshot -c 3 -C 10000 -r {wildcards.regions} --bam {input.bam} --ref {params.ref_to_use} --out {output}"
 
@@ -233,7 +233,7 @@ rule phase_bam_index_lra:
         index = temp("combined_lra/combined_{regions}.vcf.gz.tbi")
     params:
         memory_per_thread="6G"
-    threads: 2
+    threads: 1
     shell:
         """
         bgzip -c {input} > {output.zip}
@@ -250,7 +250,7 @@ rule merge_vcf_lra:
         index = protected("combined_lra/combined.vcf.gz.tbi")
     params:
         memory_per_thread="4G"
-    threads: 2
+    threads: 1
     shell:
         """
         bcftools concat -a -O v {input.zip} | bcftools sort -O z -o {output.zip}
@@ -284,6 +284,101 @@ rule haplotag_bam_lra:
     params:
         memory_per_thread="16G",
         ref_to_use= get_reference_default
-    threads: 2
+    threads: 1
     shell:
         "whatshap haplotag --ignore-read-groups --reference {params.ref_to_use} {input.vcf} {input.bam} | samtools sort -o {output.bam}"
+
+
+
+
+
+# ReAlign
+
+rule split_bam_winnow_realign:
+    input:
+        bam = "{sample}/winnow_realign/{sample}.sorted.bam",
+        bai = "{sample}/winnow_realign/{sample}.sorted.bam.bai"
+    output:
+        temp("{sample}/winnow_realign_phased/{sample}.{regions}.sorted.bam")
+    params:
+        memory_per_thread="2G"
+    threads: 1
+    shell:
+        "samtools view -b {input.bam} {wildcards.regions} > {output}"
+
+# Combined region bams for each sample
+rule combined_split_bams_winnow_realign:
+    input:
+        bam = expand("{sample}/winnow_realign_phased/{sample}.{{regions}}.sorted.bam", sample=config["samples"]),
+        bai = expand("{sample}/winnow_realign_phased/{sample}.{{regions}}.sorted.bam.bai", sample=config["samples"])
+    output:
+        temp("combined_realign_winnow/combined_{regions}.sorted.bam")
+    params:
+        memory_per_thread="2G"
+    threads: 1
+    shell:
+        "samtools merge {output} {input.bam}"
+
+# Genotype the sample with longshot
+rule phase_bam_winnow_realign:
+    input:
+        bam = "combined_realign_winnow/combined_{regions}.sorted.bam",
+        bai = "combined_realign_winnow/combined_{regions}.sorted.bam.bai"
+    output:
+        temp("combined_realign_winnow/combined_{regions}.vcf")
+    params:
+        memory_per_thread="48G",
+        ref_to_use= get_reference_default
+    threads: 1
+    shell:
+        "longshot -c 3 -C 10000 -r {wildcards.regions} --bam {input.bam} --ref {params.ref_to_use} --out {output}"
+
+# Zip and index the phased bams
+rule phase_bam_index_winnow_realign:
+    input:
+        "combined_realign_winnow/combined_{regions}.vcf"
+    output:
+        zip = temp("combined_realign_winnow/combined_{regions}.vcf.gz"),
+        index = temp("combined_realign_winnow/combined_{regions}.vcf.gz.tbi")
+    params:
+        memory_per_thread="6G"
+    threads: 1
+    shell:
+        """
+        bgzip -c {input} > {output.zip}
+        tabix -p vcf {output.zip}
+        """
+
+# Merge the vcf files
+rule merge_vcf_winnow_realign:
+    input:
+        zip = expand("combined_realign_winnow/combined_{regions}.vcf.gz", regions=regions),
+        index = expand("combined_realign_winnow/combined_{regions}.vcf.gz.tbi", regions=regions)
+    output:
+        zip = protected("combined_realign_winnow/combined.vcf.gz"),
+        index = protected("combined_realign_winnow/combined.vcf.gz.tbi")
+    params:
+        memory_per_thread="4G"
+    threads: 1
+    shell:
+        """
+        bcftools concat -a -O v {input.zip} | bcftools sort -O z -o {output.zip}
+        tabix -p vcf {output.zip}
+        """
+
+# Tag the bams with the haplotype information
+rule haplotag_bam_winnow_realign:
+    input:
+        vcf = "combined_realign_winnow/combined.vcf.gz",
+        tbi = "combined_realign_winnow/combined.vcf.gz.tbi",
+        bam = "{sample}/winnow_realign/{sample}.sorted.bam",
+        bai = "{sample}/winnow_realign/{sample}.sorted.bam.bai"
+    output:
+        bam = protected("{sample}/winnow_realign_phased/{sample}.sorted.phased.bam")
+    params:
+        memory_per_thread="16G",
+        ref_to_use= get_reference_default
+    threads: 1
+    shell:
+        "whatshap haplotag --ignore-read-groups --reference {params.ref_to_use} {input.vcf} {input.bam} | samtools sort -o {output.bam}"
+

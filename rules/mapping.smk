@@ -2,6 +2,20 @@
 # Mapping related rules
 #
 
+# Add MD to winnowmap calls
+
+rule winnow_add_md:
+    input:
+        "{sample}/winnow_mapped/{sample}.sorted.bam"
+    output:
+        "{sample}/winnow_mapped/{sample}.sorted.md.bam"
+    params:
+        memory_per_thread="12G", 
+        ref=get_reference_base
+    threads: 1
+    shell:
+        "samtools calmd {input} {params.ref} -b > {output}"
+
 # Winnowmap Alignmnet
 
 rule winnow_index:
@@ -51,7 +65,7 @@ rule winnow_align:
         i=0
         for filename in {params.input_fastq_folder}*.fastq.gz; do
             echo $filename
-            {config[winnow_dir]} -W {input} -ax {config[minimap2_preset]} {params.ref_to_use} $filename | samtools sort -T {params.tmp_loc} -o {params.tmp_output}_$i
+            {config[winnow_dir]} -W {input} -ax {config[minimap2_preset]} -t {threads} {params.ref_to_use} $filename | samtools sort -T {params.tmp_loc} -o {params.tmp_output}_$i
             ((i=i+1))
         done
         samtools merge {output} {params.tmp_output}*

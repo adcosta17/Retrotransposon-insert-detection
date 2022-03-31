@@ -197,12 +197,12 @@ def get_read_pos(record, min_insert, front):
 parser = argparse.ArgumentParser( description='Read the results of mapping reads to a reference genome, output a paf with split mappings combined if needed')
 parser.add_argument('--read-to-reference-bam', type=str, required=True)
 parser.add_argument('--merged', type=str, required=True)
-parser.add_argument('--bam-output', nargs='?',const=True, default=False)
-parser.add_argument('--indel-size', nargs='?',const=100, default=100)
+parser.add_argument('--bam-output', type=str, required=True)
+parser.add_argument('--indel-size', type=int, default=100)
 parser.add_argument('--min-detected-inclusion-length', type=int, default=50)
-parser.add_argument('--reference-gap-minimum', nargs='?',const=10, default=10)
-parser.add_argument('--minimum-mapping-qual', nargs='?',const=20, default=20)
-parser.add_argument('--fastq-folder', nargs='?', const="", default="")
+parser.add_argument('--reference-gap-minimum', type=int , default=10)
+parser.add_argument('--minimum-mapping-qual', type=int , default=20)
+parser.add_argument('--fastq-folder', type=str, required=True)
 args = parser.parse_args()
 
 
@@ -210,7 +210,6 @@ header = pysam.AlignmentFile(args.read_to_reference_bam).header
 with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
     with open(args.merged, 'w') as out_merged:
         for sq in header['SQ']:
-            print(sq['SN'])
             alignments_to_output = []
             alignment_start_end = []
             indels_merged = 0
@@ -236,12 +235,14 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                             (record_1.reference_length + record_2.reference_length) > 1.2* get_read_length(record_1.cigarstring) or
                             (abs(record_1.reference_end - record_2.reference_start) > int(args.reference_gap_minimum) and 
                             abs(record_2.reference_end - record_1.reference_start) > int(args.reference_gap_minimum)) or
-                            record_1.mapping_quality < args.minimum_mapping_qual or record_2.mapping_quality < args.minimum_mapping_qual):
-                            if check_insertion_or_soft_clip_bam(record_1, args.min_detected_inclusion_length):
-                                if check_insertion_hard_clip_bam(record_1, args.min_detected_inclusion_length):
+                            record_1.mapping_quality < int(args.minimum_mapping_qual) or record_2.mapping_quality < int(args.minimum_mapping_qual)):
+                            if check_insertion_or_soft_clip_bam(record_1, int(args.min_detected_inclusion_length)):
+                                if check_insertion_hard_clip_bam(record_1, int(args.min_detected_inclusion_length)):
                                     need_hard_clip.append(record_1)
                                 else:
                                     outf.write(record_1)
+                            else:
+                                outf.write(record_1)
                             record_1 = record_2
                             i += 1
                             continue
@@ -268,50 +269,64 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                             alignment_start_end.append(tmp_str)
                             alignments_to_output.append(a)
                             out_merged.write(record_1.query_name+"\n")
-                            record_1_merged = True
+                            # Recompute records with a at the start and [i:]
+                            #print(a)
+                            #print(records[i:])
+                            tmp = [a]
+                            tmp.extend(records[i+1:])
+                            records = tmp
+                            print(a)
+                            i = 1
                         else:
                             # Need to check insertions in each of the records together
                             # Don't want to exclude them just because they aren't properly split
-                            if check_insertion_or_soft_clip_bam(record_1, args.min_detected_inclusion_length):
-                                if check_insertion_hard_clip_bam(record_1, args.min_detected_inclusion_length):
+                            if check_insertion_or_soft_clip_bam(record_1, int(args.min_detected_inclusion_length)):
+                                if check_insertion_hard_clip_bam(record_1, int(args.min_detected_inclusion_length)):
                                     need_hard_clip.append(record_1)
                                 else:
                                     outf.write(record_1)
-                            if check_insertion_or_soft_clip_bam(record_2, args.min_detected_inclusion_length):
-                                if check_insertion_hard_clip_bam(record_2, args.min_detected_inclusion_length):
+                            else:
+                                outf.write(record_1)
+                            if check_insertion_or_soft_clip_bam(record_2, int(args.min_detected_inclusion_length)):
+                                if check_insertion_hard_clip_bam(record_2, int(args.min_detected_inclusion_length)):
                                     need_hard_clip.append(record_2)
                                 else:
                                     outf.write(record_2)
-                        i += 1
-                        if i < len(records):
-                            record_1_merged = False
-                            record_1 = records[i]
+                            else:
+                                outf.write(record_2)
                             i += 1
+                            if i < len(records):
+                                record_1_merged = False
+                                record_1 = records[i]
+                                i += 1
                     #Check insertion for record_1 now
-                    if check_insertion_or_soft_clip_bam(record_1, args.min_detected_inclusion_length) and not record_1_merged:
-                        if check_insertion_hard_clip_bam(record_1, args.min_detected_inclusion_length):
+                    if check_insertion_or_soft_clip_bam(record_1, int(args.min_detected_inclusion_length)) and not record_1_merged:
+                        if check_insertion_hard_clip_bam(record_1, int(args.min_detected_inclusion_length)):
                             need_hard_clip.append(record_1)
                         else:
                             outf.write(record_1)
+                    else:
+                        outf.write(record_1)
                 else:
                     # Single mapping for read, Check for insert
-                    if check_insertion_or_soft_clip_bam(records[0], args.min_detected_inclusion_length):
-                        if check_insertion_hard_clip_bam(records[0], args.min_detected_inclusion_length):
+                    if check_insertion_or_soft_clip_bam(records[0], int(args.min_detected_inclusion_length)):
+                        if check_insertion_hard_clip_bam(records[0], int(args.min_detected_inclusion_length)):
                             need_hard_clip.append(records[0])
                         else:
                             outf.write(records[0])
+                    else:
+                        outf.write(records[0])
             if(args.fastq_folder):
-                onlyfiles = [f for f in listdir(args.fastq_folder) if isfile(join(args.fastq_folder, f)) and f.endswith("fastq.gz")]
+                onlyfiles = [f for f in listdir(args.fastq_folder) if isfile(join(args.fastq_folder, f)) and f.endswith("fastq.bgz")]
                 out_count = 0
                 for file in onlyfiles:
                     # open each fastq. If reads we want are in the fastq look them up and get the specific sequence
                     # if they aren't in the fastq
                     with pysam.FastaFile(filename = args.fastq_folder+ "/" + file) as fq:
-                        i = 0
-                        seen = []
+                        seen = {}
                         for i in range(len(alignments_to_output)):
-                            if i in seen:
-                                continue
+                            if alignments_to_output[i].query_name not in seen:
+                                seen[alignments_to_output[i].query_name] = []
                             try:
                                 start = int(alignment_start_end[i].split("_")[0])
                                 end = int(alignment_start_end[i].split("_")[1])
@@ -320,17 +335,26 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                                 if end - start != get_read_length(alignments_to_output[i].cigarstring):
                                    print(alignments_to_output[i].query_name + " " + alignments_to_output[i].reference_name + " " + 
                                     str(len(seq)) + " " + str(end - start) + " " + str(get_read_length(alignments_to_output[i].cigarstring)))
-                                   seen.append(i)
                                    continue 
                                 if(alignments_to_output[i].is_reverse):
                                     alignments_to_output[i].query_sequence = reverse_complement(seq)[start:end]
                                 else:
                                     alignments_to_output[i].query_sequence = seq[start:end]
-                                outf.write(alignments_to_output[i])
+                                seen[alignments_to_output[i].query_name].append(alignments_to_output[i])
                                 out_count += 1
-                                seen.append(i)
                             except KeyError:
                                 pass
+                        for read in seen:
+                            i = 0
+                            while i < len(seen[read]):
+                                if i + 1 < len(seen[read]):
+                                    if seen[read][i].reference_start == seen[read][i+1].reference_start or seen[read][i].reference_end == seen[read][i+1].reference_end:
+                                        pass
+                                    else:
+                                        outf.write(seen[read][i])
+                                else:
+                                    outf.write(seen[read][i])
+                                i += 1
                         seen = []
                         for i in range(len(need_hard_clip)):
                             if i in seen:
@@ -339,7 +363,7 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                                 record = need_hard_clip[i]
                                 read_seq = fq.fetch(record.query_name)
                                 # Look at the front of the sequence for a soft/hard clip
-                                read_pos = get_read_pos(record, args.min_detected_inclusion_length, True)
+                                read_pos = get_read_pos(record, int(args.min_detected_inclusion_length), True)
                                 if read_pos != None:
                                     #get sequence of clip and add it accordingly
                                     #Have to remove any soft clip off the front and replace it with the soft and hardclip sequence. 
@@ -363,7 +387,7 @@ with pysam.AlignmentFile(args.bam_output, "wb", header=header) as outf:
                                         # now add region from read pos in
                                         record.query_sequence = read_seq[read_pos[0]:read_pos[1]] + record.query_sequence
                                 # Look at the end of the sequence for a soft/hard clip
-                                read_pos = get_read_pos(record, args.min_detected_inclusion_length, False)
+                                read_pos = get_read_pos(record, int(args.min_detected_inclusion_length), False)
                                 if read_pos != None:
                                     #get sequence of clip and add it accordingly
                                     #Have to remove any soft clip off the end and replace it with the soft and hardclip sequence. 

@@ -106,6 +106,8 @@ for record in sam_reader.fetch():
                 tmp = len(record.query_sequence) - read_start
                 read_start = len(record.query_sequence) - read_end
                 read_end = tmp
+            if insertion_sequence == "":
+                insertion_sequence = "N"
             records_to_output[record.query_name].append(["%s\t%d\t%d\t%s\t%d\t%d\t%.1f\t%s" % (record.reference_name, ref_start, ref_end, record.query_name, read_start, read_end, sdust_score, insertion_sequence), annotation])
 
     if record.query_name in records_to_output:

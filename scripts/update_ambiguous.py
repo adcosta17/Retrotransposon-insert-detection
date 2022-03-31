@@ -3,6 +3,7 @@ import argparse
 import sys
 import csv
 from collections import defaultdict
+import mappy as mp
 
 class RepbaseMapping:
 
@@ -51,8 +52,7 @@ def get_mapped_total(annotation):
         mapped_total += (interval[1] - interval[0])
     return mapped_total
 
-def parse_mappings_from_tab(input_tab):
-    read_to_best_annotation = {}
+def parse_mappings_from_tab(input_tab, min_escore):
     fn = [ "score", "name1", "start1", "alnSize1", "strand1", "seqSize1", "name2", "start2", "alnSize2", "strand2", "seqSize2", "blocks", "EG", "E" ]
     family_count = {}
     with open(input_tab) as tsvfile:
@@ -64,16 +64,12 @@ def parse_mappings_from_tab(input_tab):
                 continue
 
             escore = float(row['E'].split('=')[1])
-            if escore > args.min_escore:
+            if escore > min_escore:
                 continue
 
             repeat_name = row['name1']
             read_name = row['name2'].split(":")[0]
             insert_position = row['name2'].split(":")[1]
-            # Get start and end postion on 
-            read_insert_start = int(row['name2'].split(":")[1].split("-")[0])
-            read_alignment_start_pos = read_insert_start+int(row['start2'])
-            read_alignment_end_pos = read_alignment_start_pos+int(row['alnSize2'])
             
             if read_name not in family_count:
                 family_count[read_name] = {}
@@ -87,25 +83,14 @@ def parse_mappings_from_tab(input_tab):
                 family_count[read_name][insert_position]["SVA"] += 1
             elif "ERV" in repeat_name:
                 family_count[read_name][insert_position]["ERV"] += 1
-
-            if read_name not in read_to_best_annotation:
-                # If read not seen create a dict for it
-                read_to_best_annotation[read_name] = defaultdict(RepbaseMapping)
-            if insert_position not in read_to_best_annotation[read_name]:
-                # If this insert on the read hasn't been seen before, add the hit. 
-                # Repbase tab file is sorted by best hit first so first hit should be highest scoring
-                read_to_best_annotation[read_name][insert_position] = RepbaseMapping(repeat_name, row['alnSize2'], float(row['alnSize2']) / float(row['seqSize2']), 
-                                                                    escore, read_alignment_start_pos, read_alignment_end_pos, int(row['start1']), int(row['start1'])+int(row['alnSize1']))
-            elif (("LINE" in repeat_name and "LINE" in read_to_best_annotation[read_name][insert_position].name) or 
-                    ("SVA" in repeat_name and "SVA" in read_to_best_annotation[read_name][insert_position].name) or 
-                    ("ERV" in repeat_name and "ERV" in read_to_best_annotation[read_name][insert_position].name) or 
-                    ("SINE" in repeat_name and "SINE" in read_to_best_annotation[read_name][insert_position].name)):
-                # Another hit for an insert we've already seen. Check to see if it is from the same repeat familiy as the best scoring hit, and if it intersects
-                read_to_best_annotation[read_name][insert_position] = merge_repbase_hits(read_to_best_annotation[read_name][insert_position], read_alignment_start_pos, read_alignment_end_pos)
-    return (read_to_best_annotation,family_count)
+    return family_count
 
 def multiple_families(family_count, read_name, insert_position):
     count = 0
+    if read_name not in family_count:
+        return False
+    if insert_position not in family_count[read_name]:
+        return False
     for item in family_count[read_name][insert_position]:
         if family_count[read_name][insert_position][item] > 0:
             count += 1
@@ -128,6 +113,7 @@ parser.add_argument('--last-tab', required=False)
 parser.add_argument('--min-mapped-fraction', type=float, default=0.9)
 parser.add_argument('--min-mapped-length', type=int, default=100)
 parser.add_argument('--min-escore', type=float, default=1e-14)
+parser.add_argument('--sub-family-fasta', required=False)
 args = parser.parse_args()
 
 read_to_best_annotation = defaultdict(RepbaseMapping)
@@ -135,7 +121,11 @@ read_to_best_annotation = defaultdict(RepbaseMapping)
 if args.minimap2_paf:
     read_to_best_annotation = parse_mappings_from_paf(args.minimap2_paf)
 elif args.last_tab:
-    read_to_best_annotation,family_count = parse_mappings_from_tab(args.last_tab)
+    family_count = parse_mappings_from_tab(args.last_tab, args.min_escore)
+
+if args.sub_family_fasta:
+    a = mp.Aligner(args.sub_family_fasta)  # load or build index
+    if not a: raise Exception("ERROR: failed to load/build index")
 
 with open(args.input) as csvfile:
     count = 0
@@ -145,10 +135,18 @@ with open(args.input) as csvfile:
             count = 1
             print(row.strip())
             continue
-        annotation = RepbaseMapping("no_repbase_mapping", 0, 0, 0, 0, 0, 0, 0)
         # Get the best annotation for the read an the insert postion
-        if row_args[3] in read_to_best_annotation:
-            if str(row_args[4]+"-"+row_args[5]) in read_to_best_annotation[row_args[3]]:
-                if multiple_families(family_count, row_args[3], str(row_args[4]+"-"+row_args[5])):
-                    row_args[9] = get_family_str(family_count, row_args[3], str(row_args[4]+"-"+row_args[5]))
+        if multiple_families(family_count, row_args[3], str(row_args[4]+"-"+row_args[5])):
+            row_args[9] = get_family_str(family_count, row_args[3], str(row_args[4]+"-"+row_args[5]))
+        if "LINE" in row_args[9] and args.sub_family_fasta:
+            # Now check for sub_family mapping
+            best_score = 0
+            best_hit = ""
+            for hit in a.map(row_args[7]): # traverse alignments
+                a_score = (hit.mlen-hit.NM)/hit.blen
+                if a_score > best_score:
+                    best_hit = hit.ctg
+                    best_score = a_score
+            if best_hit != "":
+                row_args[9] = row_args[9]+"___Subfamily:_"+best_hit
         print("\t".join(row_args))

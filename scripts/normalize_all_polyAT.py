@@ -45,16 +45,6 @@ def get_filters_to_exclude(pf_annotation, filters, repbase_annotation):
     return False
 
 
-def filter_poly_AT(insert_seq):
-    has_poly_AT = False
-    start = insert_seq[:50]
-    end = insert_seq[len(insert_seq)-50:]
-    pA = "A"*5
-    pT = "T"*5
-    if pA in start or pT in start or pA in end or pT in end:
-        has_poly_AT = True
-    return has_poly_AT
-
 def seen_before(read, chrom, start, end, seen_positions):
     if read in seen_positions:
         for position in seen_positions[read]:
@@ -139,41 +129,17 @@ with open(args.input) as csvfile:
             if "LINE" in row_args[9]:
                 counts_pass["LINE"] += 1
                 seen_annotation_count += 1
-                if filter_poly_AT(row_args[7]):
-                    counts_pass["LINE_PolyA"] += 1
-                if "novel" in row:
-                    counts_pass["LINE_Novel"] += 1
-                else:
-                    counts_pass["LINE_HotSpot"] += 1
             if "SINE" in row_args[9]:
                 counts_pass["SINE"] += 1
                 seen_annotation_count += 1
-                if filter_poly_AT(row_args[7]):
-                    counts_pass["SINE_PolyA"] += 1
-                if "novel" in row:
-                    counts_pass["SINE_Novel"] += 1
-                else:
-                    counts_pass["SINE_HotSpot"] += 1
             if "SVA" in row_args[9]:
                 counts_pass["SVA"] += 1
                 seen_annotation_count += 1
-                if "novel" in row:
-                    counts_pass["SVA_Novel"] += 1
-                else:
-                    counts_pass["SVA_HotSpot"] += 1
             if "ERV" in row_args[9]:
                 counts_pass["ERV"] += 1
                 seen_annotation_count += 1
-                if "novel" in row:
-                    counts_pass["ERV_Novel"] += 1
-                else:
-                    counts_pass["ERV_HotSpot"] += 1
             if "ambiguous" in row_args[9] and seen_annotation_count == 0:
                 counts_pass["ambiguous"] += 1
-                if "novel" in row:
-                    counts_pass["ambiguous_Novel"] += 1
-                else:
-                    counts_pass["ambiguous_HotSpot"] += 1
             if args.subfamily and "Subfamily" in row_args[9]:
                 sub = row_args[9].split("Subfamily:")[1]
                 sub_count = 0
@@ -195,38 +161,14 @@ with open(args.output_all, 'w') as out_all:
     all_rpm = counts_pass["All"]/rpm_denom
     line_mbp = counts_pass["LINE"]/mbp_denom
     line_rpm = counts_pass["LINE"]/rpm_denom
-    line_novel_mbp = counts_pass["LINE_Novel"]/mbp_denom
-    line_novel_rpm = counts_pass["LINE_Novel"]/rpm_denom
-    line_hotspot_mbp = counts_pass["LINE_HotSpot"]/mbp_denom
-    line_hotspot_rpm = counts_pass["LINE_HotSpot"]/rpm_denom
-    line_polya_mbp = counts_pass["LINE_PolyA"]/mbp_denom
-    line_polya_rpm = counts_pass["LINE_PolyA"]/rpm_denom
     sine_mbp = counts_pass["SINE"]/mbp_denom
     sine_rpm = counts_pass["SINE"]/rpm_denom
-    sine_novel_mbp = counts_pass["SINE_Novel"]/mbp_denom
-    sine_novel_rpm = counts_pass["SINE_Novel"]/rpm_denom
-    sine_hotspot_mbp = counts_pass["SINE_HotSpot"]/mbp_denom
-    sine_hotspot_rpm = counts_pass["SINE_HotSpot"]/rpm_denom
-    sine_polya_mbp = counts_pass["SINE_PolyA"]/mbp_denom
-    sine_polya_rpm = counts_pass["SINE_PolyA"]/rpm_denom
     ambiguous_mbp = counts_pass["ambiguous"]/mbp_denom
     ambiguous_rpm = counts_pass["ambiguous"]/rpm_denom
-    ambiguous_novel_mbp = counts_pass["ambiguous_Novel"]/mbp_denom
-    ambiguous_novel_rpm = counts_pass["ambiguous_Novel"]/rpm_denom
-    ambiguous_hotspot_mbp = counts_pass["ambiguous_HotSpot"]/mbp_denom
-    ambiguous_hotspot_rpm = counts_pass["ambiguous_HotSpot"]/rpm_denom
     sva_mbp = counts_pass["SVA"]/mbp_denom
     sva_rpm = counts_pass["SVA"]/rpm_denom
-    sva_novel_mbp = counts_pass["SVA_Novel"]/mbp_denom
-    sva_novel_rpm = counts_pass["SVA_Novel"]/rpm_denom
-    sva_hotspot_mbp = counts_pass["SVA_HotSpot"]/mbp_denom
-    sva_hotspot_rpm = counts_pass["SVA_HotSpot"]/rpm_denom
     erv_mbp = counts_pass["ERV"]/mbp_denom
     erv_rpm = counts_pass["ERV"]/rpm_denom
-    erv_novel_mbp = counts_pass["ERV_Novel"]/mbp_denom
-    erv_novel_rpm = counts_pass["ERV_Novel"]/rpm_denom
-    erv_hotspot_mbp = counts_pass["ERV_HotSpot"]/mbp_denom
-    erv_hotspot_rpm = counts_pass["ERV_HotSpot"]/rpm_denom
     l1_mbp = counts_pass_subfamily["L1"]/mbp_denom
     l1_rpm = counts_pass_subfamily["L1"]/rpm_denom
     l1p_mbp = counts_pass_subfamily["L1P"]/mbp_denom
@@ -236,28 +178,16 @@ with open(args.output_all, 'w') as out_all:
     l1h_mbp = counts_pass_subfamily["L1H"]/mbp_denom
     l1h_rpm = counts_pass_subfamily["L1H"]/rpm_denom
     out_all.write(args.sample+"\t"+
+        str(counts_pass["All"])+"\t"+str(all_mbp)+"\t"+str(all_rpm)+"\t"+
         str(counts_pass["LINE"])+"\t"+str(line_mbp)+"\t"+str(line_rpm)+"\t"+
-        str(counts_pass["LINE_Novel"])+"\t"+str(line_novel_mbp)+"\t"+str(line_novel_rpm)+"\t"+
-        str(counts_pass["LINE_HotSpot"])+"\t"+str(line_hotspot_mbp)+"\t"+str(line_hotspot_rpm)+"\t"+
         str(counts_pass["SINE"])+"\t"+str(sine_mbp)+"\t"+str(sine_rpm)+"\t"+
-        str(counts_pass["SINE_Novel"])+"\t"+str(sine_novel_mbp)+"\t"+str(sine_novel_rpm)+"\t"+
-        str(counts_pass["SINE_HotSpot"])+"\t"+str(sine_hotspot_mbp)+"\t"+str(sine_hotspot_rpm)+"\t"+
         str(counts_pass["SVA"])+"\t"+str(sva_mbp)+"\t"+str(sva_rpm)+"\t"+
-        str(counts_pass["SVA_Novel"])+"\t"+str(sva_novel_mbp)+"\t"+str(sva_novel_rpm)+"\t"+
-        str(counts_pass["SVA_HotSpot"])+"\t"+str(sva_hotspot_mbp)+"\t"+str(sva_hotspot_rpm)+"\t"+
         str(counts_pass["ERV"])+"\t"+str(erv_mbp)+"\t"+str(erv_rpm)+"\t"+
-        str(counts_pass["ERV_Novel"])+"\t"+str(erv_novel_mbp)+"\t"+str(erv_novel_rpm)+"\t"+
-        str(counts_pass["ERV_HotSpot"])+"\t"+str(erv_hotspot_mbp)+"\t"+str(erv_hotspot_rpm)+"\t"+
         str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
-        str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
-        str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
-    if args.subfamily:
-        out_all.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
+        str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
         str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
         str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
-        str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
-    out_all.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+
-        str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\n")
+        str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\n")
 
 mbp_denom = mapped_base_count/1000000000
 rpm_denom = mapped_read_count/1000000
@@ -267,38 +197,14 @@ with open(args.output_mapped, 'w') as out_mapped:
     all_rpm = counts_pass["All"]/rpm_denom
     line_mbp = counts_pass["LINE"]/mbp_denom
     line_rpm = counts_pass["LINE"]/rpm_denom
-    line_novel_mbp = counts_pass["LINE_Novel"]/mbp_denom
-    line_novel_rpm = counts_pass["LINE_Novel"]/rpm_denom
-    line_hotspot_mbp = counts_pass["LINE_HotSpot"]/mbp_denom
-    line_hotspot_rpm = counts_pass["LINE_HotSpot"]/rpm_denom
-    line_polya_mbp = counts_pass["LINE_PolyA"]/mbp_denom
-    line_polya_rpm = counts_pass["LINE_PolyA"]/rpm_denom
     sine_mbp = counts_pass["SINE"]/mbp_denom
     sine_rpm = counts_pass["SINE"]/rpm_denom
-    sine_novel_mbp = counts_pass["SINE_Novel"]/mbp_denom
-    sine_novel_rpm = counts_pass["SINE_Novel"]/rpm_denom
-    sine_hotspot_mbp = counts_pass["SINE_HotSpot"]/mbp_denom
-    sine_hotspot_rpm = counts_pass["SINE_HotSpot"]/rpm_denom
-    sine_polya_mbp = counts_pass["SINE_PolyA"]/mbp_denom
-    sine_polya_rpm = counts_pass["SINE_PolyA"]/rpm_denom
     ambiguous_mbp = counts_pass["ambiguous"]/mbp_denom
     ambiguous_rpm = counts_pass["ambiguous"]/rpm_denom
-    ambiguous_novel_mbp = counts_pass["ambiguous_Novel"]/mbp_denom
-    ambiguous_novel_rpm = counts_pass["ambiguous_Novel"]/rpm_denom
-    ambiguous_hotspot_mbp = counts_pass["ambiguous_HotSpot"]/mbp_denom
-    ambiguous_hotspot_rpm = counts_pass["ambiguous_HotSpot"]/rpm_denom
     sva_mbp = counts_pass["SVA"]/mbp_denom
     sva_rpm = counts_pass["SVA"]/rpm_denom
-    sva_novel_mbp = counts_pass["SVA_Novel"]/mbp_denom
-    sva_novel_rpm = counts_pass["SVA_Novel"]/rpm_denom
-    sva_hotspot_mbp = counts_pass["SVA_HotSpot"]/mbp_denom
-    sva_hotspot_rpm = counts_pass["SVA_HotSpot"]/rpm_denom
     erv_mbp = counts_pass["ERV"]/mbp_denom
     erv_rpm = counts_pass["ERV"]/rpm_denom
-    erv_novel_mbp = counts_pass["ERV_Novel"]/mbp_denom
-    erv_novel_rpm = counts_pass["ERV_Novel"]/rpm_denom
-    erv_hotspot_mbp = counts_pass["ERV_HotSpot"]/mbp_denom
-    erv_hotspot_rpm = counts_pass["ERV_HotSpot"]/rpm_denom
     l1_mbp = counts_pass_subfamily["L1"]/mbp_denom
     l1_rpm = counts_pass_subfamily["L1"]/rpm_denom
     l1p_mbp = counts_pass_subfamily["L1P"]/mbp_denom
@@ -308,28 +214,16 @@ with open(args.output_mapped, 'w') as out_mapped:
     l1h_mbp = counts_pass_subfamily["L1H"]/mbp_denom
     l1h_rpm = counts_pass_subfamily["L1H"]/rpm_denom
     out_mapped.write(args.sample+"\t"+
+        str(counts_pass["All"])+"\t"+str(all_mbp)+"\t"+str(all_rpm)+"\t"+
         str(counts_pass["LINE"])+"\t"+str(line_mbp)+"\t"+str(line_rpm)+"\t"+
-        str(counts_pass["LINE_Novel"])+"\t"+str(line_novel_mbp)+"\t"+str(line_novel_rpm)+"\t"+
-        str(counts_pass["LINE_HotSpot"])+"\t"+str(line_hotspot_mbp)+"\t"+str(line_hotspot_rpm)+"\t"+
         str(counts_pass["SINE"])+"\t"+str(sine_mbp)+"\t"+str(sine_rpm)+"\t"+
-        str(counts_pass["SINE_Novel"])+"\t"+str(sine_novel_mbp)+"\t"+str(sine_novel_rpm)+"\t"+
-        str(counts_pass["SINE_HotSpot"])+"\t"+str(sine_hotspot_mbp)+"\t"+str(sine_hotspot_rpm)+"\t"+
         str(counts_pass["SVA"])+"\t"+str(sva_mbp)+"\t"+str(sva_rpm)+"\t"+
-        str(counts_pass["SVA_Novel"])+"\t"+str(sva_novel_mbp)+"\t"+str(sva_novel_rpm)+"\t"+
-        str(counts_pass["SVA_HotSpot"])+"\t"+str(sva_hotspot_mbp)+"\t"+str(sva_hotspot_rpm)+"\t"+
         str(counts_pass["ERV"])+"\t"+str(erv_mbp)+"\t"+str(erv_rpm)+"\t"+
-        str(counts_pass["ERV_Novel"])+"\t"+str(erv_novel_mbp)+"\t"+str(erv_novel_rpm)+"\t"+
-        str(counts_pass["ERV_HotSpot"])+"\t"+str(erv_hotspot_mbp)+"\t"+str(erv_hotspot_rpm)+"\t"+
         str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
-        str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
-        str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
-    if args.subfamily:
-        out_mapped.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
+        str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
         str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
         str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
-        str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
-    out_mapped.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+
-        str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\n")
+        str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\n")
 
 with open(args.output_distributions, 'w') as out_dist:
     #out_dist.write("")

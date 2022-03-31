@@ -157,7 +157,7 @@ for sample in args.sample.split(','):
 def get_seen_reads(samples, regions, seen_reads):
     records_per_read = defaultdict(list)
     for sample in samples.split(','):
-        sam_reader = pysam.AlignmentFile("./"+sample+"/"+args.bam_folder+"/"+sample+args.bam_suffix, check_sq=False)
+        sam_reader = pysam.AlignmentFile("./"+sample+"/"+args.bam_folder+"/"+sample+args.bam_suffix)
         for region in regions:
             for record in sam_reader.fetch(region=region):
                 if record.is_unmapped or record.query_name not in seen_reads:
@@ -170,7 +170,7 @@ def get_mapq_reads(samples, regions, mapq_reads, ref_sample):
     records_per_read = defaultdict(list)
     for sample in samples.split(','):
         if sample == ref_sample:
-            sam_reader = pysam.AlignmentFile("./"+sample+"/"+args.bam_folder+"/"+sample+args.bam_suffix, check_sq=False)
+            sam_reader = pysam.AlignmentFile("./"+sample+"/"+args.bam_folder+"/"+sample+args.bam_suffix)
             for region in regions:
                 for record in sam_reader.fetch(region=region):
                     if record.is_unmapped or record.query_name not in mapq_reads:
