@@ -1,6 +1,8 @@
 # List samples here
 samples:
-    - combined_sample
+    - Sample1
+    - Sample2
+    - Sample3
 
 # List tests here
 tests:
@@ -53,6 +55,9 @@ sniffles_dir:
 
 racon_dir:
     /path/to/racon
+    
+somrit_dir:
+    /path/to/somrit
 
 
 # Reference for test. Same as base ref normally
