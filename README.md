@@ -1,4 +1,4 @@
-# Retrotransposon-insert-detection
+# Retrotransposon Insertion Detection
 
 A Snakemake analysis pipeline for detecting novel retrotransposon insertions in long reads
 
