@@ -33,7 +33,8 @@ cd Retrotransposon-insert-detection
 # Usage: 
 snakemake -s rt_insert_snakefile.smk --configfile project_config.yaml <target>
 
-# End-To-End Run with winnowmap2:
-snakemake -s rt_insert_snakefile.smk --configfile project_config.yaml all_normalized_ava_counts_combined_winnow
+# End-To-End Run with winnowmap2, first step to generate the data, second to normalize counts:
+snakemake -s rt_insert_snakefile.smk --configfile project_config.yaml all_winnow_realign
+snakemake -s rt_insert_snakefile.smk --configfile project_config.yaml all_winnow_realign_normalized
 ```
 The pipeline requires that the fastq folder is provided and will generate all required data and files as it proceeds. The pipeline outputs a tsv for each sample listing each insertion detected and if it passed the filters and was considered novel, or what filter(s) it failed. It additionally outputs summary stats for each sample, breaking down the passing insertions into their respective repeat families and normalizing them by the number of mapped reads and mapped bases.  
