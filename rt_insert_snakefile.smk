@@ -59,6 +59,13 @@ rule all_winnow_realign:
     input:
         expand("{s}/winnow_realign_read_analysis/{s}.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv", s=config["samples"])
 
+rule all_winnow_both_normalized:
+    input:
+        expand("{s}/winnow_read_analysis/{s}.{t}.normalized_ava_counts.txt", t=config["tests"], s=config["samples"]),
+        expand("{s}/winnow_read_analysis/{s}.{t}.normalized_ava_counts.updated_annoation.txt", t=config["tests"], s=config["samples"]),
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_counts.txt", s=config["samples"]),
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_counts.updated_annoation.txt", s=config["samples"])
+
 rule all_winnow_both:
     input:
         expand("{s}/winnow_read_analysis/{s}.{t}.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv", t=config["tests"], s=config["samples"]),
@@ -79,6 +86,11 @@ rule all_tra_filtered:
 rule all_graph_aligned:
     input:
         expand("{s}/structural_variants/{s}.gaf", s=config["samples"])
+
+rule all_winnow_bams:
+    input:
+        expand("{s}/winnow_mapped/{s}.sorted.bam", s=config["samples"])
+
 
 #
 # Top level targets
@@ -184,6 +196,11 @@ rule all_sample_bams_winnow:
     input:
         expand("{s}/winnow_mapped/{s}.sorted.bam.bai", s=config["samples"]),
         expand("{s}/winnow_mapped/{s}.sorted.bam", s=config["samples"])
+
+rule all_winnow_realign_phased:
+    input:
+        expand("{s}/winnow_realign_phased/{s}.sorted.phased.bam.bai", s=config["samples"]),
+        expand("{s}/winnow_realign_phased/{s}.sorted.phased.bam", s=config["samples"])
 
 rule all_sample_bams_lra_winnow:
     input:

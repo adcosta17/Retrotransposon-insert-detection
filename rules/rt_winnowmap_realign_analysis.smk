@@ -52,7 +52,7 @@ rule extract_inserts:
         merged_reads="{sample}/winnow_realign/{sample}.merged_reads.txt"
     threads: 10
     params:
-        memory_per_thread="20G",
+        memory_per_thread="15G",
         fastq=get_fastq,
         base_dir=get_base_dir
     shell:
@@ -72,7 +72,7 @@ rule realign_inserts:
         tsv="combined_realign_winnow_all/{chrom}.realigned.tsv"
     threads: 10
     params:
-        memory_per_thread="20G",
+        memory_per_thread="30G",
         fastq=get_all_fastq,
         bams=get_all_bam_list,
         tsvs=get_tsv_list,
@@ -81,7 +81,7 @@ rule realign_inserts:
     shell:
         """
         cd {config[somrit_dir]}
-        python somrit.py realign --bam-list {params.bams} --tsv-list {params.tsvs} --fastq-list {params.fastq} --output-dir {params.base_dir}/combined_realign_winnow_all --tsv-prefix realigned --bam-prefix sorted --reference-genome {params.ref} --threads {threads} --filter-depth --max-insert-size 10000 --max-depth 50 --chromosome-list {wildcards.chrom} --only-realign --high-mem
+        python somrit.py realign --bam-list {params.bams} --tsv-list {params.tsvs} --fastq-list {params.fastq} --output-dir {params.base_dir}/combined_realign_winnow_all --tsv-prefix realigned --bam-prefix sorted --reference-genome {params.ref} --threads {threads} --filter-depth --max-insert-size 10000 --max-depth 50 --chromosome-list {wildcards.chrom} --only-realign
         cd {params.base_dir}
         """
 
@@ -333,7 +333,7 @@ rule filter_inserts_within_other_inserts_winnow_realign:
         region_list = srcdir("../utils/split_regions.bed"),
         memory_per_thread="10G"
     shell:
-        "python {params.script} --sample {config[samples_csv]} --folder winnow_read_analysis --merged-reads .merged_reads.txt --merged-folder winnow_realign --bam-folder winnow_realign --bam-suffix .sorted.bam --insert-location-output {output.inserts} --low-mapq-output {output.low_mapq} --regions-list {params.region_list} --threads {threads}"
+        "python {params.script} --sample {config[samples_csv]} --folder winnow_realign_read_analysis --suffix .read_insertions.repbase_annotated.mapq_ct_filtered.tsv --merged-reads .merged_reads.txt --merged-folder winnow_realign --bam-folder winnow_realign --bam-suffix .sorted.bam --insert-location-output {output.inserts} --low-mapq-output {output.low_mapq} --regions-list {params.region_list} --threads {threads}"
 
 
 rule normalize_counts_winnow_realign:

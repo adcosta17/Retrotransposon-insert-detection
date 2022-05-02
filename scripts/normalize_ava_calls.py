@@ -251,11 +251,11 @@ with open(args.output_all, 'w') as out_all:
         str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
         str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
         str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
-    if args.subfamily:
-        out_all.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
-        str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
-        str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
-        str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
+    #if args.subfamily:
+    #    out_all.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
+    #    str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
+    #    str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
+    #    str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
     out_all.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+
         str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\n")
 
@@ -323,11 +323,11 @@ with open(args.output_mapped, 'w') as out_mapped:
         str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
         str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
         str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
-    if args.subfamily:
-        out_mapped.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
-        str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
-        str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
-        str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
+    #if args.subfamily:
+    #    out_mapped.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
+    #    str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
+    #    str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
+    #    str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
     out_mapped.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+
         str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\n")
 
