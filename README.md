@@ -1,4 +1,4 @@
-# Retrotransposon-insert-detection
+# Retrotransposon Insertion Detection
 
 A Snakemake analysis pipeline for detecting novel retrotransposon insertions in long reads
 
@@ -7,6 +7,7 @@ A Snakemake analysis pipeline for detecting novel retrotransposon insertions in 
 - snakemake
 - pybedtools
 - minimap2
+- winnowmap2
 - lastal
 - samtools
 - longshot
@@ -14,11 +15,15 @@ A Snakemake analysis pipeline for detecting novel retrotransposon insertions in 
 
 ## Pipeline Overview
 
-The pipeline takes in one or more fastq's from one or more samples as input. The location of the folder containing the fastq's can be provided in the config. These fastq's are mapped to a provided reference genome, with alignments filtered and altered to recover possible missed insertions. Candidate insertions are computed, with the insert sequence being aligned to a database on known retrotranpsosn concensus sequences. Candidates that map well to a concensus sequence and that are found in an area with high average mapping quality are considered. Candidates are filtered to remove mapping artifacts and chimeric reads. A control sample is to filter hits unique to the sample(s), representing variation between the control sample and the reference genome. Reads from the sample are be phased with the assigned haplotypes being used to futher remove mapping artifacts and polymorphic insertions, leaving a set of novel inserts.
+The pipeline takes in one or more fastq's from one or more samples as input. These fastqs are first mapped to a provided reference genome, with insertions extracted from these alignments. A re-alignment process is then run using [somrit](https://github.com/adcosta17/somrit) to reduce the ambiguity of insertion position between reads and recover missed insertions. Insertions are then extracted from the re-aligned BAMs with alignments filtered and altered to recover possible missed insertions. Candidate insertions are computed, with the insert sequence being aligned to a database on known retrotranpsosn concensus sequences. Candidates that map well to a concensus sequence and that are found in an area with high average mapping quality are considered. Candidates are filtered to remove mapping artifacts and chimeric reads. A control sample is to filter hits unique to the sample(s), representing variation between the control sample and the reference genome. Reads from the sample are be phased with the assigned haplotypes being used to futher remove mapping artifacts and polymorphic insertions, leaving a set of novel inserts. 
 
 ## Usage
 
-The pipeline is run using snakemake with a config file specified. The recomended aligner is winnowmap2. The pipeline is designed to work with minimap2 and lra if requested. 
+The pipeline is run using snakemake with a config file specified. The recomended aligner is winnowmap2. The pipeline is designed to work with minimap2 if requested, but realignment is only currently supported with winnowmap2.
+
+### Prerequisites
+
+For each sample listed in the config file, a folder should be generated, and a subfolder `fastq` created and populated with the fastqs for that sample. 
 
 ```sh
 # Setup:
