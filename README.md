@@ -5,7 +5,7 @@ A Snakemake analysis pipeline for detecting novel retrotransposon insertions in 
 ## Dependencies
 - pysam
 - snakemake
-- pybedtools
+- bgzip
 - minimap2
 - winnowmap2
 - lastal
@@ -23,7 +23,7 @@ The pipeline is run using snakemake with a config file specified. The recomended
 
 ### Prerequisites
 
-For each sample listed in the config file, a folder should be generated, and a subfolder `fastq` created and populated with the fastqs for that sample. 
+For each sample listed in the config file, a folder should be generated, and a subfolder `fastq` created and populated with the fastqs for that sample. Each fastq should be compressed with bgzip. 
 
 ```sh
 # Setup:
