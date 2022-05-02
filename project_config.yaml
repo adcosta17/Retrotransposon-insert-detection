@@ -4,9 +4,8 @@ samples:
     - Sample2
     - Sample3
 
-# List tests here
 tests:
-    - all_rt
+    - all
 
 samples_csv:
     samples,as,a,csv,list
@@ -86,10 +85,10 @@ small_window:
   50
 
 telomere_filter:
-    hg38_telomeres.tsv
+    utils/hg38_telomeres.tsv
 
 centromere_filter:
-    hg38_centromeres.tsv
+    utils/hg38_centromeres.tsv
 
 reference_tsv_to_filter:
     /path/to/control/sample/tsv

@@ -59,6 +59,11 @@ rule all_winnow_realign:
     input:
         expand("{s}/winnow_realign_read_analysis/{s}.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv", s=config["samples"])
 
+rule all_winnow_realign_normalized:
+    input:
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_counts.txt", s=config["samples"]),
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_counts.updated_annoation.txt", s=config["samples"])
+
 rule all_winnow_both_normalized:
     input:
         expand("{s}/winnow_read_analysis/{s}.{t}.normalized_ava_counts.txt", t=config["tests"], s=config["samples"]),
