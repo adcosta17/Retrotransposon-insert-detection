@@ -182,30 +182,13 @@ parser.add_argument('--hap2', type=str, required=True)
 parser.add_argument('--sample', required=True)
 parser.add_argument('--chroms', required=True)
 parser.add_argument('--folder', required=True)
-parser.add_argument('--vcf', required=True)
 parser.add_argument('--bam', required=True)
 parser.add_argument('--tsv', required=True)
-parser.add_argument('--bed', required=True)
 parser.add_argument('--normalized', type=str, required=True)
-parser.add_argument('--data', type=str, required=True)
 parser.add_argument('--sniffles', type=str, required=False)
 parser.add_argument('--max-distance', type=int, default=500)
 parser.add_argument('--min-read-length', type=int, default=7000)
 args = parser.parse_args()
-
-#giab_regions = {}
-#with open(args.bed, 'r') as in_bed:
-#    for line in in_bed:
-#        row = line.strip().split('\t')
-#        if row[0] not in giab_regions:
-#            giab_regions[row[0]] = {}
-#            giab_regions[row[0]]["start"] = defaultdict(int)
-#            giab_regions[row[0]]["end"] = defaultdict(int)
-#        #print(row, file=sys.stderr)
-#        giab_regions[row[0]]["start"][int(row[1])] = int(row[2])
-#        giab_regions[row[0]]["end"][int(row[2])] = int(row[1])
-#
-#print("GIAB Input", file=sys.stderr)
 
 total_hc = 1
 total_hc_flank = 1
@@ -232,8 +215,6 @@ with open(args.tsv, 'r') as in_tsv:
         if count == 0:
             count = 1
             continue
-        #if args.sample not in row[5] or (int(row[13])-int(row[12]))/int(len(row[4])) < 0.5:
-        #    continue
         if row[6] == "PASS" and "Polymorphic" not in line:
             reads = row[5].split(',')
             for read in reads:
@@ -310,8 +291,6 @@ with open(args.tsv, 'r') as in_tsv:
             continue
         if args.sample not in row[5]:
             continue
-        #if (int(row[13])-int(row[12]))/int(len(row[4])) < 0.5:
-        #    continue
         if row[6] == "PASS" and "Polymorphic" not in line:
             polymorphic = "PossiblyNovel_NotInAssembly"
             reads = row[5].split(',')
@@ -344,9 +323,6 @@ with open(args.tsv, 'r') as in_tsv:
                 single_sample = True
             else:
                 row.append("MultiSample")
-            #ret = check_nearby(row[0], int(row[1])-1, int(row[2])+1, giab_regions)
-            #if len(ret) == 0:
-            #    polymorphic = "NotInGIABRegions"
             if polymorphic == "PossiblyNovel_NotInAssembly":
                 family = get_family(row[7])
                 # Have a passing insert
@@ -392,62 +368,5 @@ with open(args.normalized, 'w') as out_norm:
             out_norm.write("\t"+str(counts[item])+"\t"+str(single_sample_counts[item])+"\t"+str(0)+"\t"+str(0))
     out_norm.write("\n")
 
-with open(args.data, 'w') as out_data:
-    out_data.write("Sample\tread_flank_hc_bases\tread_total_hc_bases\tAll_Count\tAll_HC_Flank_NEB\tAll_HC_NEB\tLINE_Count\tLINE_HC_Flank_NEB\tLINE_HC_NEB\tAlu_Count\tAlu_HC_Flank_NEB\tAlu_HC_NEB\tSVA_Count\tSVA_HC_Flank_NEB\tSVA_HC_NEB\tAmbiguous_Count\tAmbiguous_HC_Flank_NEB\tAmbiguous_HC_NEB\n")
-    out_data.write(args.sample+"\t"+str(total_hc_flank)+"\t"+str(total_hc))
-    for item in avg_size:
-        out_data.write("\t"+str(counts[item])+"\t"+str(counts[item]/total_hc_flank)+"\t"+str(counts[item]/total_hc))
-    out_data.write("\n")
-
 print("Norm inserts output", file=sys.stderr)
 
-#exit(0)i
-
-### Sniffles
-
-#samples_list = args.samples.split(',')
-#counts = {}
-#counts["All"] = defaultdict(int)
-#counts["INS"] = defaultdict(int)
-#counts["DEL"] = defaultdict(int)
-#counts["DUP"] = defaultdict(int)
-#counts["INV"] = defaultdict(int)
-#counts["BND"] = defaultdict(int)
-#counts_uniq = {}
-#counts_uniq["All"] = defaultdict(int)
-#counts_uniq["INS"] = defaultdict(int)
-#counts_uniq["DEL"] = defaultdict(int)
-#counts_uniq["DUP"] = defaultdict(int)
-#counts_uniq["INV"] = defaultdict(int)
-#counts_uniq["BND"] = defaultdict(int)
-#
-#count = 0
-#with open(args.vcf, 'r') as in_vcf:
-#    for line in in_vcf:
-#        if '#' in line: 
-#            continue
-#        count += 1
-#        if count % 10000 == 0:
-#            print(count, file=sys.stderr)
-#        row = line.strip().split('\t')
-#        ret = check_nearby(row[0], int(row[1])-1, int(row[1])+1, giab_regions)
-#        if len(ret) == 0:
-#            continue
-#        sv_type = get_type(row[2])
-#        if sv_type == "NA":
-#            continue
-#        sample_count = defaultdict(int)
-#        for i in range(len(samples_list)):
-#            sample = samples_list[i]
-#            if "NULL" in row[9+i]:
-#                continue
-#            counts[sv_type][sample] += 1
-#            counts["All"][sample] += 1
-#            sample_count[sample] += 1
-#        if len(sample_count) == 1:
-#            for sample in sample_count:
-import pysam
-import pysam
-import argparse
-import sys
-import csv

@@ -4,10 +4,6 @@
 def get_sample(wildcards):
     return config["full_sample"]
 
-def get_assembly(wildcards):
-    sample = get_sample(wildcards)
-    return config["assembly_folder"]+"/"+sample+"/assembly/"+sample+"."+wildcards.hap+".fa"
-
 def get_fastq(wildcards):
     return config["fastq"]
 
@@ -32,25 +28,8 @@ def get_centromeres(wildcards):
 def get_telomeres(wildcards):
     return config["telomeres"]
 
-def get_maternal(wildcards):
-    sample = get_sample(wildcards)
-    return config["assembly_folder"]+"/"+sample+"/assembly/"+sample+".mat.fa"
-
-def get_paternal(wildcards):
-    sample = get_sample(wildcards)
-    return config["assembly_folder"]+"/"+sample+"/assembly/"+sample+".pat.fa"
-
 def get_chrom_list(wildcards):
     return "chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22,chrX,chrY"
-
-def get_chrom_lengths(wildcards):
-    return config["chrom_lengths"]
-
-def get_giab_bed(wildcards):
-    return config["giab_bed"]
-
-def get_pbsim_model(wildcards):
-    return config["pbsim_model"]
 
 def get_tsv_list(wildcards):
     tsv_list = ""
@@ -88,11 +67,11 @@ def get_output_tsv_list(wildcards):
     bam_list = config['base_dir']+wildcards.sample+"/realign/"+wildcards.sample+".tsv"
     return bam_list
 
-def get_bt16_hap1(wildcards):
-    return config['bt16_hap1']
+def get_asm_hap1(wildcards):
+    return config['asm_hap1']
 
-def get_bt16_hap2(wildcards):
-    return config['bt16_hap2']
+def get_asm_hap2(wildcards):
+    return config['asm_hap2']
 
 ## Index a bam
 rule make_bam_index:
@@ -287,7 +266,7 @@ rule map_hap1_inserts:
     threads: 10
     params:
         memory_per_thread="20G",
-        hap1=get_bt16_hap1,
+        hap1=get_asm_hap1,
         fastq="{sample}/fastq/{sample}.fastq.gz"
     shell:
         """
@@ -300,7 +279,7 @@ rule map_hap2_inserts:
     threads: 10
     params:
         memory_per_thread="20G",
-        hap2=get_bt16_hap2,
+        hap2=get_asm_hap2,
         fastq="{sample}/fastq/{sample}.fastq.gz"
     shell:
         """
@@ -321,7 +300,6 @@ rule filter_polymorphic_inserts:
         hap2="{sample}/polymorphic/{sample}_inserts.hap2.bam",
         hap1_bai="{sample}/polymorphic/{sample}_inserts.hap1.bam.bai",
         hap2_bai="{sample}/polymorphic/{sample}_inserts.hap2.bam.bai",
-        bed=get_giab_bed
     shell:
         """
         python {params.script} --tsv {params.tsv} --hap1 {params.hap1} --hap2 {params.hap2} --bam {params.bam} --bed {params.bed} --sample {wildcards.sample} --normalized {output.normalized} > {output.tsv}
@@ -340,7 +318,6 @@ rule filter_polymorphic_inserts_chrom:
         hap2="{sample}/polymorphic/{sample}_inserts.hap2.bam",
         hap1_bai="{sample}/polymorphic/{sample}_inserts.hap1.bam.bai",
         hap2_bai="{sample}/polymorphic/{sample}_inserts.hap2.bam.bai",
-        bed=get_giab_bed
     shell:
         """
         python {params.script} --tsv {params.tsv} --bam {params.bam} --sample {wildcards.sample} --chrom {wildcards.chrom} --read-lengths {output.reads}
@@ -350,49 +327,26 @@ rule filter_polymorphic_inserts_combined:
     input:
         expand("{{sample}}/polymorphic/{{sample}}_reads_{chrom}.txt",chrom=config["chroms"])
     output:
-        norm="{sample}/results/{sample}.old_norm.txt",
-        data="{sample}/results/{sample}.hc_norm.txt",
+        norm="{sample}/results/{sample}.norm.txt",
         inserts="{sample}/results/{sample}.inserts.tsv"
     threads: 1
     params:
         memory_per_thread="64G",
-        script=srcdir("../scripts/hc_regions.py"),
+        script=srcdir("../scripts/normalize_effective_all.py"),
         bam="{sample}/mapped/{sample}.bam",
         tsv="combined_realign_all/Realigned_classified_filtered.tsv",
         hap1="{sample}/polymorphic/{sample}_inserts.hap1.bam",
         hap2="{sample}/polymorphic/{sample}_inserts.hap2.bam",
         hap1_bai="{sample}/polymorphic/{sample}_inserts.hap1.bam.bai",
         hap2_bai="{sample}/polymorphic/{sample}_inserts.hap2.bam.bai",
-        bed=get_giab_bed,
-        vcf="sniffles_multi_sample.vcf",
         samples=get_all_samples,
         chroms=get_chrom_list
     shell:
         """
-        python {params.script} --tsv {params.tsv} --samples {params.samples} --sample {wildcards.sample} --hap1 {params.hap1} --hap2 {params.hap2} --chroms {params.chroms} --folder polymorphic --vcf {params.vcf} --bam {params.bam} --bed {params.bed} --normalized {output.norm} --data {output.data} > {output.inserts}
+        python {params.script} --tsv {params.tsv} --samples {params.samples} --sample {wildcards.sample} --hap1 {params.hap1} --hap2 {params.hap2} --chroms {params.chroms} --folder polymorphic --bam {params.bam}  --normalized {output.norm}  > {output.inserts}
         """
 
 
-
-rule filter_polymorphic_inserts_fpr:
-    output:
-        tsv="{sample}/polymorphic_fpr/{sample}_inserts.tsv",
-        normalized="{sample}/polymorphic_fpr/{sample}_normalized_counts.txt"
-    threads: 1
-    params:
-        memory_per_thread="36G",
-        script=srcdir("../scripts/get_polymorphic_somrit_fpr.py"),
-        bam="{sample}/mapped/{sample}.bam",
-        tsv="combined_realign_all/Realigned_classified_filtered.tsv",
-        hap1="{sample}/polymorphic/{sample}_inserts.hap1.bam",
-        hap2="{sample}/polymorphic/{sample}_inserts.hap2.bam",
-        hap1_bai="{sample}/polymorphic/{sample}_inserts.hap1.bam.bai",
-        hap2_bai="{sample}/polymorphic/{sample}_inserts.hap2.bam.bai",
-        bed=get_giab_bed
-    shell:
-        """
-        python {params.script} --tsv {params.tsv} --hap1 {params.hap1} --hap2 {params.hap2} --bam {params.bam} --bed {params.bed} --sample {wildcards.sample} --normalized {output.normalized} > {output.tsv}
-        """
 
 
 rule sniffles_vcf:
@@ -455,7 +409,6 @@ rule sniffles_summarize_per_sample:
         samples=get_all_samples,
         hap1="{sample}/polymorphic/{sample}_inserts.hap1.bam",
         hap2="{sample}/polymorphic/{sample}_inserts.hap2.bam",
-        bed=get_giab_bed
     threads: 2
     shell:
         """

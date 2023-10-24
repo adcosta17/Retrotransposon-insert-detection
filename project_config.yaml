@@ -58,6 +58,11 @@ racon_dir:
 somrit_dir:
     /path/to/somrit
 
+asm_hap1:
+    /path/to/asm/hap1.fa
+
+asm_hap2:
+    /path/to/asm/hap2.fa
 
 # Reference for test. Same as base ref normally
 reference_all:
