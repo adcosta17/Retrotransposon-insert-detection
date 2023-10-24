@@ -1,6 +1,8 @@
 import os
 import glob
 
+include: "rules/helpers.smk"
+
 rule all:
     input:
         expand("{s}/read_analysis/{s}.{t}.normalized_ava_counts.txt", t=config["tests"], s=config["samples"]),
@@ -61,8 +63,7 @@ rule all_winnow_realign:
 
 rule all_winnow_realign_normalized:
     input:
-        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_counts.txt", s=config["samples"]),
-        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_counts.updated_annoation.txt", s=config["samples"])
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_mapped_counts_updated_annotation_effective_bases.txt", s=config["samples"])
 
 rule all_winnow_both_normalized:
     input:
@@ -78,7 +79,7 @@ rule all_winnow_both:
 
 rule all_winnow_realign_bams:
     input:
-        expand("{s}/winnow_realign/{s}.sorted.bam", s=config["samples"])
+        expand("{s}/winnow_realign/{s}.sorted.bam", s=config["samples_all"])
 
 rule all_lra_phased:
     input:
@@ -94,7 +95,8 @@ rule all_graph_aligned:
 
 rule all_winnow_bams:
     input:
-        expand("{s}/winnow_mapped/{s}.sorted.bam", s=config["samples"])
+        expand("{s}/winnow_mapped/{s}.sorted.bam", s=config["samples_all"]),
+        expand("{s}/winnow_mapped/{s}.sorted.bam.bai", s=config["samples_all"])
 
 
 #
@@ -270,7 +272,38 @@ rule all_xtea_winnow:
         expand("{s}/winnow_realign_read_analysis/{s}.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.updated_annoation.tsv", s=config["samples"])
 
 
-include: "rules/helpers.smk"
+rule all_effective_bases_normalized:
+    input:
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_mapped_counts_updated_annotation_effective_bases.txt", s=config ["samples"]),
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_mapped_counts_effective_bases.txt", s=config ["samples"])
+
+rule all_normalized_no_polymorphic:
+    input:
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_ava_mapped_counts_no_polymorphic_updated_annotation_effective_bases.txt", s=config ["samples"]),
+        expand("{s}/winnow_realign_read_analysis/{s}.normalized_no_polymorphic_ava_counts.updated_annoation.txt", s=config ["samples"])
+
+rule all_normalized_no_polymorphic_novel:
+    input:
+        expand("{s}.normalized_ava_mapped_counts_no_polymorphic_updated_annotation_effective_bases.novel.txt", s=config ["samples"]),
+        expand("{s}.normalized_ava_mapped_counts_updated_annotation_effective_bases.novel.txt", s=config ["samples"]),
+        expand("{s}.normalized_ava_counts.updated_annoation.txt", s=config ["samples"])
+
+rule all_updated_annotation_no_poymorphic:
+    input:
+        expand("{s}/winnow_realign_read_analysis/{s}.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.updated_annotation.tsv", s=config ["samples"])
+
+rule all_tldr:
+    input:
+        expand("tldr_combined/DDTS_combined.{c}.table.txt", c=config ["chroms"])
+
+rule all_tldr_regions:
+    input:
+        expand("tldr_combined_regions/DDTS_combined.{r}.table.txt", r=chr22_regions)
+
+#rule all_sample_mean_effect:
+#    input:
+#        expand("Num_Samples_Test/Sample_{m}_{e}_.txt", m=config["means"], e=config["effects"])
+
 include: "rules/mapping.smk"
 include: "rules/phasing.smk"
 include: "rules/rt_analysis.smk"
@@ -279,3 +312,5 @@ include: "rules/rt_lra_analysis.smk"
 include: "rules/rt_winnowmap_analysis.smk"
 include: "rules/rt_winnowmap_realign_analysis.smk"
 include: "rules/xtea.smk"
+#include: "rules/sample_analysis.smk"
+

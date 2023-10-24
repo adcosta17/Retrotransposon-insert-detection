@@ -21,11 +21,10 @@ def get_winnow_kmers(wildcards):
         return config["reference_all"]+"_repetitive_k15.txt"
 # Search fastq folder from config
 def get_sample_fastq(wildcards):
-    path = config['base_dir'] + wildcards.sample + "/fastq/*.fastq.gz"
-    return glob.glob(path)
+    return config['base_dir'] + wildcards.sample + "/fastq/" + wildcards.sample + ".fastq.gz"
 
 def get_sample_fastq_folder(wildcards):
-    return config['base_dir'] + wildcards.sample + "/fastq/"
+    return config['base_dir'] + "../" +wildcards.sample + "/fastq/"
 
 def get_run_fastq_folder(wildcards):
     return config['base_dir'] + wildcards.sample + "/run_fastq/"
@@ -47,6 +46,15 @@ def get_regions():
     return regions
 
 regions = get_regions()
+
+def get_chr22_regions():
+    f = open(config['chr22_regions'])
+    chr22_regions = list()
+    for line in f:
+        chr22_regions.append(line.rstrip())
+    return chr22_regions
+
+chr22_regions = get_chr22_regions()
 
 def get_reference_default(wildcards):
     return config["reference_all"]

@@ -52,7 +52,7 @@ for sample in args.samples.split(','):
     unique_pass_sva = 0
     shared_polymorphic_sva = 0
     unique_polymorphic_sva = 0
-    with open(sample+"/winnow_read_analysis/"+sample+".all.read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.tsv") as csvfile:
+    with open(sample+"/winnow_realign_read_analysis/"+sample+".read_insertions.repbase_annotated.mapq_ct_filtered.ma_filtered.ref_filtered_haplotype_checked.tsv") as csvfile:
         count = 0
         for line in csvfile:
             if count == 0:

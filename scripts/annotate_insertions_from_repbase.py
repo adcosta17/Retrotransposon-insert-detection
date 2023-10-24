@@ -66,9 +66,9 @@ def parse_mappings_from_tab(input_tab):
             escore = float(row['E'].split('=')[1])
             if escore > args.min_escore:
                 continue
-
+            #print(row)
             repeat_name = row['name1']
-            read_name = row['name2'].split(":")[0]
+            read_name = row['name2'].split(":")[0]#+":"+row['name2'].split(":")[1]
             insert_position = row['name2'].split(":")[1]
             # Get start and end postion on 
             read_insert_start = int(row['name2'].split(":")[1].split("-")[0])
@@ -139,6 +139,7 @@ with open(args.input) as csvfile:
             continue
         annotation = RepbaseMapping("no_repbase_mapping", 0, 0, 0, 0, 0, 0, 0)
         # Get the best annotation for the read an the insert postion
+        #print(row_args[3])
         if row_args[3] in read_to_best_annotation:
             if str(row_args[4]+"-"+row_args[5]) in read_to_best_annotation[row_args[3]]:
                 annotation = read_to_best_annotation[row_args[3]][str(row_args[4]+"-"+row_args[5])]

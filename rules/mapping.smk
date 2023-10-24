@@ -56,20 +56,13 @@ rule winnow_align:
     params:
         memory_per_thread="10G",
         ref_to_use= get_reference_base,
-        input_fastq_folder=get_sample_fastq_folder,
+        input_fastq=get_sample_fastq,
         tmp_loc="{sample}/winnow_mapped/{sample}.tmp",
         tmp_output="{sample}/winnow_mapped/{sample}.sorted.tmp.bam"
     threads: 20
     shell:
         """
-        i=0
-        for filename in {params.input_fastq_folder}*.fastq.gz; do
-            echo $filename
-            {config[winnow_dir]} -W {input} -ax {config[minimap2_preset]} -t {threads} {params.ref_to_use} $filename | samtools sort -T {params.tmp_loc} -o {params.tmp_output}_$i
-            ((i=i+1))
-        done
-        samtools merge {output} {params.tmp_output}*
-        rm {params.tmp_output}*
+        {config[winnow_dir]} -W {input} -ax {config[minimap2_preset]} -t {threads} {params.ref_to_use} {params.input_fastq} | samtools sort -T {params.tmp_loc} -o {output}
         """
 
 # LRA Alignment

@@ -95,6 +95,10 @@ mapped_read_count = 0.0
 mapped_base_count = 0.0
 mapped_read_lens = defaultdict(int)
 onlyfiles = [f for f in listdir(args.fastq_folder) if isfile(join(args.fastq_folder, f)) and f.endswith("fastq.gz")]
+all_reads = []
+all_size = 0 
+mapped_reads = []
+mapped_size = 0
 for file in onlyfiles:
     try:
         with pysam.FastaFile(filename = args.fastq_folder+ "/" + file, filepath_index_compressed = args.fastq_folder+ "/" +file + ".gzi") as in_fq:
@@ -103,12 +107,38 @@ for file in onlyfiles:
                 total_read_count += 1
                 total_base_count += len(seq)
                 total_read_lens[math.floor(len(seq)/1000.0)*1000] += 1
+                all_reads.append(len(seq))
+                all_size += len(seq)
                 if read in reads_to_use:
                     mapped_read_count += 1
                     mapped_base_count += len(seq)
                     mapped_read_lens[math.floor(len(seq)/1000.0)*1000] += 1
+                    mapped_reads.append(len(seq))
+                    mapped_size += len(seq)
     except OSError:
         pass
+
+all_reads.sort(reverse=True)
+total_count = 0
+overall_n50 = 0
+for val in all_reads:
+    if total_count == 0:
+        print(val)
+    if (val+total_count)/all_size > 0.5:
+        overall_n50 = val
+        break
+    total_count+= val
+
+mapped_reads.sort(reverse=True)
+total_mapped_count = 0
+mapped_n50 = 0
+for val in mapped_reads:
+    if total_mapped_count == 0:
+        print(val)
+    if (val+total_mapped_count)/mapped_size > 0.5:
+        mapped_n50 = val
+        break
+    total_mapped_count+= val
 
 #print(args.sample + "\t" + str(read_count) + "\t" + str(base_count))
 # Print raw, base normalized and read normalized insert counts
@@ -129,7 +159,10 @@ with open(args.input) as csvfile:
         if count == 0:
             count = 1
             continue
+
         if row_args[8] == "PASS":
+            if "ambiguous" in row_args[9]:
+                continue
             if seen_before(row_args[3], row_args[0], row_args[1], row_args[2], seen_positions):
                 continue
             seen_positions[row_args[3]][row_args[0]+":"+row_args[1]+"-"+row_args[2]] = 1
@@ -195,19 +228,27 @@ with open(args.output_all, 'w') as out_all:
     all_rpm = counts_pass["All"]/rpm_denom
     line_mbp = counts_pass["LINE"]/mbp_denom
     line_rpm = counts_pass["LINE"]/rpm_denom
+    line_n50 = counts_pass["LINE"]/overall_n50
+    line_both = line_mbp/rpm_denom
     line_novel_mbp = counts_pass["LINE_Novel"]/mbp_denom
     line_novel_rpm = counts_pass["LINE_Novel"]/rpm_denom
     line_hotspot_mbp = counts_pass["LINE_HotSpot"]/mbp_denom
     line_hotspot_rpm = counts_pass["LINE_HotSpot"]/rpm_denom
     line_polya_mbp = counts_pass["LINE_PolyA"]/mbp_denom
+    line_polya_n50 = counts_pass["LINE_PolyA"]/overall_n50
+    line_polya_both = line_polya_mbp/rpm_denom
     line_polya_rpm = counts_pass["LINE_PolyA"]/rpm_denom
     sine_mbp = counts_pass["SINE"]/mbp_denom
     sine_rpm = counts_pass["SINE"]/rpm_denom
+    sine_n50 = counts_pass["SINE"]/overall_n50
+    sine_both = sine_mbp/rpm_denom
     sine_novel_mbp = counts_pass["SINE_Novel"]/mbp_denom
     sine_novel_rpm = counts_pass["SINE_Novel"]/rpm_denom
     sine_hotspot_mbp = counts_pass["SINE_HotSpot"]/mbp_denom
     sine_hotspot_rpm = counts_pass["SINE_HotSpot"]/rpm_denom
     sine_polya_mbp = counts_pass["SINE_PolyA"]/mbp_denom
+    sine_polya_n50 = counts_pass["SINE_PolyA"]/overall_n50
+    sine_polya_both = sine_polya_mbp/rpm_denom
     sine_polya_rpm = counts_pass["SINE_PolyA"]/rpm_denom
     ambiguous_mbp = counts_pass["ambiguous"]/mbp_denom
     ambiguous_rpm = counts_pass["ambiguous"]/rpm_denom
@@ -236,6 +277,7 @@ with open(args.output_all, 'w') as out_all:
     l1h_mbp = counts_pass_subfamily["L1H"]/mbp_denom
     l1h_rpm = counts_pass_subfamily["L1H"]/rpm_denom
     out_all.write(args.sample+"\t"+
+        #str(counts_pass["All"])+"\t"+str(all_mbp)+"\t"+str(all_rpm)+"\t"+
         str(counts_pass["LINE"])+"\t"+str(line_mbp)+"\t"+str(line_rpm)+"\t"+
         str(counts_pass["LINE_Novel"])+"\t"+str(line_novel_mbp)+"\t"+str(line_novel_rpm)+"\t"+
         str(counts_pass["LINE_HotSpot"])+"\t"+str(line_hotspot_mbp)+"\t"+str(line_hotspot_rpm)+"\t"+
@@ -247,17 +289,17 @@ with open(args.output_all, 'w') as out_all:
         str(counts_pass["SVA_HotSpot"])+"\t"+str(sva_hotspot_mbp)+"\t"+str(sva_hotspot_rpm)+"\t"+
         str(counts_pass["ERV"])+"\t"+str(erv_mbp)+"\t"+str(erv_rpm)+"\t"+
         str(counts_pass["ERV_Novel"])+"\t"+str(erv_novel_mbp)+"\t"+str(erv_novel_rpm)+"\t"+
-        str(counts_pass["ERV_HotSpot"])+"\t"+str(erv_hotspot_mbp)+"\t"+str(erv_hotspot_rpm)+"\t"+
-        str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
-        str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
-        str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
+        str(counts_pass["ERV_HotSpot"])+"\t"+str(erv_hotspot_mbp)+"\t"+str(erv_hotspot_rpm)+"\t")
+        #str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
+        #str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
+        #str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
     #if args.subfamily:
     #    out_all.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
     #    str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
     #    str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
     #    str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
-    out_all.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+
-        str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\n")
+    out_all.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+str(line_polya_n50)+"\t"+str(line_polya_both)+"\t"+
+        str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\t"+str(sine_polya_n50)+"\t"+str(sine_polya_both)+"\n")
 
 mbp_denom = mapped_base_count/1000000000
 rpm_denom = mapped_read_count/1000000
@@ -267,19 +309,27 @@ with open(args.output_mapped, 'w') as out_mapped:
     all_rpm = counts_pass["All"]/rpm_denom
     line_mbp = counts_pass["LINE"]/mbp_denom
     line_rpm = counts_pass["LINE"]/rpm_denom
+    line_n50 = counts_pass["LINE"]/overall_n50
+    line_both = line_mbp/rpm_denom
     line_novel_mbp = counts_pass["LINE_Novel"]/mbp_denom
     line_novel_rpm = counts_pass["LINE_Novel"]/rpm_denom
     line_hotspot_mbp = counts_pass["LINE_HotSpot"]/mbp_denom
     line_hotspot_rpm = counts_pass["LINE_HotSpot"]/rpm_denom
     line_polya_mbp = counts_pass["LINE_PolyA"]/mbp_denom
+    line_polya_n50 = counts_pass["LINE_PolyA"]/overall_n50
+    line_polya_both = line_polya_mbp/rpm_denom
     line_polya_rpm = counts_pass["LINE_PolyA"]/rpm_denom
     sine_mbp = counts_pass["SINE"]/mbp_denom
     sine_rpm = counts_pass["SINE"]/rpm_denom
+    sine_n50 = counts_pass["SINE"]/overall_n50
+    sine_both = sine_mbp/rpm_denom
     sine_novel_mbp = counts_pass["SINE_Novel"]/mbp_denom
     sine_novel_rpm = counts_pass["SINE_Novel"]/rpm_denom
     sine_hotspot_mbp = counts_pass["SINE_HotSpot"]/mbp_denom
     sine_hotspot_rpm = counts_pass["SINE_HotSpot"]/rpm_denom
     sine_polya_mbp = counts_pass["SINE_PolyA"]/mbp_denom
+    sine_polya_n50 = counts_pass["SINE_PolyA"]/overall_n50
+    sine_polya_both = sine_polya_mbp/rpm_denom
     sine_polya_rpm = counts_pass["SINE_PolyA"]/rpm_denom
     ambiguous_mbp = counts_pass["ambiguous"]/mbp_denom
     ambiguous_rpm = counts_pass["ambiguous"]/rpm_denom
@@ -308,6 +358,7 @@ with open(args.output_mapped, 'w') as out_mapped:
     l1h_mbp = counts_pass_subfamily["L1H"]/mbp_denom
     l1h_rpm = counts_pass_subfamily["L1H"]/rpm_denom
     out_mapped.write(args.sample+"\t"+
+        #str(counts_pass["All"])+"\t"+str(all_mbp)+"\t"+str(all_rpm)+"\t"+
         str(counts_pass["LINE"])+"\t"+str(line_mbp)+"\t"+str(line_rpm)+"\t"+
         str(counts_pass["LINE_Novel"])+"\t"+str(line_novel_mbp)+"\t"+str(line_novel_rpm)+"\t"+
         str(counts_pass["LINE_HotSpot"])+"\t"+str(line_hotspot_mbp)+"\t"+str(line_hotspot_rpm)+"\t"+
@@ -319,17 +370,17 @@ with open(args.output_mapped, 'w') as out_mapped:
         str(counts_pass["SVA_HotSpot"])+"\t"+str(sva_hotspot_mbp)+"\t"+str(sva_hotspot_rpm)+"\t"+
         str(counts_pass["ERV"])+"\t"+str(erv_mbp)+"\t"+str(erv_rpm)+"\t"+
         str(counts_pass["ERV_Novel"])+"\t"+str(erv_novel_mbp)+"\t"+str(erv_novel_rpm)+"\t"+
-        str(counts_pass["ERV_HotSpot"])+"\t"+str(erv_hotspot_mbp)+"\t"+str(erv_hotspot_rpm)+"\t"+
-        str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
-        str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
-        str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
+        str(counts_pass["ERV_HotSpot"])+"\t"+str(erv_hotspot_mbp)+"\t"+str(erv_hotspot_rpm)+"\t")
+        #str(counts_pass["ambiguous"])+"\t"+str(ambiguous_mbp)+"\t"+str(ambiguous_rpm)+"\t"+
+        #str(counts_pass["ambiguous_Novel"])+"\t"+str(ambiguous_novel_mbp)+"\t"+str(ambiguous_novel_rpm)+"\t"+
+        #str(counts_pass["ambiguous_HotSpot"])+"\t"+str(ambiguous_hotspot_mbp)+"\t"+str(ambiguous_hotspot_rpm)+"\t")
     #if args.subfamily:
     #    out_mapped.write(str(counts_pass_subfamily["L1"])+"\t"+str(l1_mbp)+"\t"+str(l1_rpm)+"\t"+
     #    str(counts_pass_subfamily["L1H"])+"\t"+str(l1h_mbp)+"\t"+str(l1h_rpm)+"\t"+
     #    str(counts_pass_subfamily["L1M"])+"\t"+str(l1m_mbp)+"\t"+str(l1m_rpm)+"\t"+
     #    str(counts_pass_subfamily["L1P"])+"\t"+str(l1p_mbp)+"\t"+str(l1p_rpm)+"\t")
-    out_mapped.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+
-        str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\n")
+    out_mapped.write(str(counts_pass["LINE_PolyA"])+"\t"+str(line_polya_mbp)+"\t"+str(line_polya_rpm)+"\t"+str(line_polya_n50)+"\t"+str(line_polya_both)+"\t"+
+        str(counts_pass["SINE_PolyA"])+"\t"+str(sine_polya_mbp)+"\t"+str(sine_polya_rpm)+"\t"+str(sine_polya_n50)+"\t"+str(sine_polya_both)+"\n")
 
 with open(args.output_distributions, 'w') as out_dist:
     #out_dist.write("")

@@ -365,9 +365,9 @@ with open(args.input) as csvfile:
             print(row.strip()+"\tsource\tsample_count\ttype")
             continue
         to_print = False
-        if row_args[3] == "b8ce41be-5e49-4739-937c-4e67c17846c9" or row_args[3] == "6d04ec05-6b3d-4c51-ba3b-60ef22c4a859" or row_args[3] == "d717c2ef-06b8-4d6e-9b0a-a928d0c1ef77" or row_args[3] == "f7b9ad3d-f06d-4a9f-9d50-5205ae8186cf":
-            to_print = True
-            print(row_args[3], file=sys.stderr)
+        #if row_args[3] == "b8ce41be-5e49-4739-937c-4e67c17846c9" or row_args[3] == "6d04ec05-6b3d-4c51-ba3b-60ef22c4a859" or row_args[3] == "d717c2ef-06b8-4d6e-9b0a-a928d0c1ef77" or row_args[3] == "f7b9ad3d-f06d-4a9f-9d50-5205ae8186cf":
+        #    to_print = True
+        #    print(row_args[3], file=sys.stderr)
         chrom = row_args[0]
         key = row_args[1]+"-"+row_args[2]
         # Check to see if there are any inserts nearby
